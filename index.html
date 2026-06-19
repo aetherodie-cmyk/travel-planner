@@ -919,6 +919,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .notes-row-label{font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.6px;width:60px;flex-shrink:0}
 .notes-input{flex:1;padding:6px 9px;border:1px solid #ddd;border-radius:7px;font-size:13px;color:#111;font-family:inherit;outline:none}
 .notes-input:focus{border-color:#378ADD}
+.spot-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.spot-form-grid.full{grid-template-columns:1fr}
+.spot-form-field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.spot-form-field label{font-size:10px;font-weight:700;color:#999;letter-spacing:.4px}
+.spot-form-field input,.spot-form-field textarea{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;color:#111;font-family:inherit;outline:none;line-height:1.5;background:#fff}
+.spot-form-field input:focus,.spot-form-field textarea:focus{border-color:#378ADD}
+.spot-form-field textarea{min-height:82px;resize:vertical}
+.spot-form-section-title{font-size:11px;font-weight:800;color:#777;margin:4px 0 8px;display:flex;align-items:center;gap:5px}
+.spot-json-panel{display:none;margin:8px 0 12px}
+.spot-json-panel textarea{width:100%;min-height:118px;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:12px;font-family:monospace;color:#111;outline:none;resize:vertical;line-height:1.6}
+.spot-json-panel textarea:focus{border-color:#7F77DD}
+.spot-json-actions{display:flex;gap:7px;margin-top:7px}
+.spot-json-msg{font-size:11px;min-height:16px;margin-top:6px;line-height:1.4}
 .notes-save-btn{width:100%;padding:8px;border:1px solid #378ADD;border-radius:8px;background:#E6F1FB;cursor:pointer;font-size:13px;font-weight:500;color:#185FA5;margin-top:12px}
 .notes-save-btn:hover{background:#d0e8f8}
 .notes-saved{font-size:11px;color:#0F6E56;text-align:center;margin-top:6px;min-height:16px}
@@ -1040,6 +1053,7 @@ body.mobile-ui #toast{bottom:calc(env(safe-area-inset-bottom) + 22px)}
 body.mobile-ui #info-modal{align-items:flex-end;justify-content:center}
 body.mobile-ui #info-modal .modal-box{width:100%;max-height:88dvh;border-radius:18px 18px 0 0}
 body.mobile-ui #info-modal-body{max-height:calc(88dvh - 92px);padding-bottom:calc(env(safe-area-inset-bottom) + 18px)}
+body.mobile-ui .spot-form-grid{grid-template-columns:1fr}
 body.mobile-ui #key-modal .modal-box,body.mobile-ui #import-modal .modal-box,body.mobile-ui #move-modal .modal-box{width:calc(100vw - 24px);max-height:86dvh}
 body.mobile-ui .time-picker-popover{left:12px!important;right:12px!important;bottom:calc(env(safe-area-inset-bottom) + 12px)!important;top:auto!important;width:auto;border-radius:18px;padding:14px}
 body.mobile-ui .time-picker-options{max-height:224px}
@@ -1099,6 +1113,28 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         <span style="font-size:12px;color:#888;flex-shrink:0">加入到：</span>
         <select class="import-day-sel" id="import-day-sel"></select>
       </div>
+      <div id="import-manual-new">
+        <div class="spot-form-section-title"><i class="ti ti-edit"></i> 手動新增景點</div>
+        <div class="spot-form-grid">
+          <div class="spot-form-field"><label>景點名稱</label><input id="import-name" placeholder="例：十和田湖"/></div>
+          <div class="spot-form-field"><label>地址</label><input id="import-addr" placeholder="例：青森縣十和田市"/></div>
+          <div class="spot-form-field"><label>緯度</label><input id="import-lat" inputmode="decimal" placeholder="例：40.468"/></div>
+          <div class="spot-form-field"><label>經度</label><input id="import-lng" inputmode="decimal" placeholder="例：140.878"/></div>
+        </div>
+        <div class="spot-form-grid">
+          <div class="spot-form-field"><label>營業時間</label><input id="import-hours" placeholder="例：全天開放"/></div>
+          <div class="spot-form-field"><label>門票費用</label><input id="import-fee" placeholder="例：免費"/></div>
+          <div class="spot-form-field"><label>電話</label><input id="import-phone" placeholder="例：0176-75-2425"/></div>
+          <div class="spot-form-field"><label>官網</label><input id="import-website" placeholder="例：https://www.example.com"/></div>
+        </div>
+        <div class="spot-form-grid full">
+          <div class="spot-form-field"><label>個人備註</label><textarea id="import-memo" placeholder="行前提醒、交通資訊、注意事項…"></textarea></div>
+        </div>
+        <div class="info-action-row" style="margin-bottom:10px">
+          <button class="json-paste-trigger" id="import-fill-json-btn" type="button"><i class="ti ti-code"></i> 從下方 JSON 填入欄位</button>
+          <button class="info-cancel-btn" id="import-clear-fields-btn" type="button"><i class="ti ti-eraser"></i> 清空欄位</button>
+        </div>
+      </div>
       <div id="import-match-row" style="display:none;margin-bottom:10px">
         <span style="font-size:12px;color:#888">補充到景點：</span>
         <select class="import-day-sel" id="import-spot-sel" style="margin-top:4px;width:100%"></select>
@@ -1109,11 +1145,11 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         <b>新增景點格式</b>（lat/lng 或 address 擇一提供）：<br>
         <code>{ "name": "景點名稱", "lat": 25.047, "lng": 121.517, "address": "地址（無座標時自動查詢）",</code><br>
         <code>&nbsp;&nbsp;"opening_hours": "…", "admission_fee": "…", "phone": "…", "website": "…", "remarks": "…" }</code><br>
-        也支援陣列一次匯入多個：<code>[ {…}, {…} ]</code>
+        可手動填上方欄位，也支援陣列一次匯入多個：<code>[ {…}, {…} ]</code>
       </div>
       <div class="import-hint" id="import-hint-info" style="display:none">
-        <b>補充資訊格式</b>（只需資訊欄位，不用座標）：<br>
-        <code>{ "opening_hours": "…", "admission_fee": "…", "phone": "…", "website": "…", "remarks": "…" }</code>
+        <b>補充資訊格式</b>（可更新名稱、地址、座標與筆記）：<br>
+        <code>{ "name": "景點名稱", "address": "地址", "lat": 25.047, "lng": 121.517, "opening_hours": "…", "admission_fee": "…", "phone": "…", "website": "…", "remarks": "…" }</code>
       </div>
       <div class="import-actions">
         <button id="import-go-btn"><i class="ti ti-check"></i> 匯入</button>
@@ -1138,11 +1174,34 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
     <div id="info-modal-body">
       <div class="info-view active" id="info-view"></div>
       <div class="info-edit" id="info-edit">
-        <div class="notes-row"><span class="notes-row-label">營業時間</span><input class="notes-input" id="note-hours" placeholder="例：09:00–17:00，週一公休"/></div>
-        <div class="notes-row"><span class="notes-row-label">門票費用</span><input class="notes-input" id="note-fee" placeholder="例：全票 200 元，學生 100 元"/></div>
-        <div class="notes-row"><span class="notes-row-label">電話</span><input class="notes-input" id="note-phone" placeholder="例：02-2345-6789"/></div>
-        <div class="notes-row"><span class="notes-row-label">官網</span><input class="notes-input" id="note-website" placeholder="例：https://www.example.com"/></div>
-        <div style="margin-bottom:8px"><div class="notes-row-label" style="margin-bottom:4px;display:block">個人備註</div><textarea class="notes-field" id="note-memo" placeholder="行前提醒、停車資訊、推薦餐廳…"></textarea></div>
+        <div class="spot-form-section-title"><i class="ti ti-map-pin"></i> 景點資料</div>
+        <div class="spot-form-grid">
+          <div class="spot-form-field"><label>景點名稱</label><input id="note-name" placeholder="例：十和田湖"/></div>
+          <div class="spot-form-field"><label>地址</label><input id="note-addr" placeholder="例：青森縣十和田市"/></div>
+          <div class="spot-form-field"><label>緯度</label><input id="note-lat" inputmode="decimal" placeholder="例：40.468"/></div>
+          <div class="spot-form-field"><label>經度</label><input id="note-lng" inputmode="decimal" placeholder="例：140.878"/></div>
+        </div>
+        <div class="spot-form-section-title"><i class="ti ti-pencil"></i> 我的筆記</div>
+        <div class="spot-form-grid">
+          <div class="spot-form-field"><label>營業時間</label><input id="note-hours" placeholder="例：09:00–17:00，週一公休"/></div>
+          <div class="spot-form-field"><label>門票費用</label><input id="note-fee" placeholder="例：全票 200 元，學生 100 元"/></div>
+          <div class="spot-form-field"><label>電話</label><input id="note-phone" placeholder="例：02-2345-6789"/></div>
+          <div class="spot-form-field"><label>官網</label><input id="note-website" placeholder="例：https://www.example.com"/></div>
+        </div>
+        <div class="spot-form-grid full">
+          <div class="spot-form-field"><label>個人備註</label><textarea id="note-memo" placeholder="行前提醒、停車資訊、推薦餐廳…"></textarea></div>
+        </div>
+        <div class="info-action-row" style="margin-bottom:8px">
+          <button class="json-paste-trigger" id="json-paste-btn" type="button"><i class="ti ti-code"></i> 貼入 JSON 自動填入</button>
+        </div>
+        <div class="spot-json-panel" id="json-paste-area">
+          <textarea id="json-input" placeholder='例：{ "name": "十和田湖", "address": "青森縣十和田市", "lat": 40.468, "lng": 140.878, "opening_hours": "全天開放", "admission_fee": "免費", "phone": "0176-75-2425", "website": "https://example.com", "remarks": "注意天候" }'></textarea>
+          <div class="spot-json-actions">
+            <button class="notes-save-btn" id="json-parse-btn" type="button" style="margin-top:0"><i class="ti ti-check"></i> 解析到欄位</button>
+            <button class="info-cancel-btn" id="json-cancel-btn" type="button"><i class="ti ti-x"></i> 取消</button>
+          </div>
+          <div class="spot-json-msg" id="json-parse-msg"></div>
+        </div>
         <div class="info-action-row">
           <button class="notes-save-btn" id="notes-save-btn" style="margin-top:0"><i class="ti ti-device-floppy"></i> 儲存到景點</button>
           <button class="info-cancel-btn" id="notes-cancel-btn"><i class="ti ti-x"></i> 取消</button>
@@ -2309,6 +2368,10 @@ function setInfoMode(mode){
 }
 function loadNoteInputs(spot){
   const n=spot.notes||{};
+  document.getElementById('note-name').value=spot.name||'';
+  document.getElementById('note-addr').value=spot.addr||'';
+  document.getElementById('note-lat').value=Number.isFinite(parseFloat(spot.lat))?String(spot.lat):'';
+  document.getElementById('note-lng').value=Number.isFinite(parseFloat(spot.lng))?String(spot.lng):'';
   document.getElementById('note-hours').value=n.hours||'';
   document.getElementById('note-fee').value=n.fee||'';
   document.getElementById('note-phone').value=n.phone||'';
@@ -2383,15 +2446,19 @@ function switchInfoTab(pane){
 
 function saveNotes(){
   if(!pendingInfoSpot)return;
-  pendingInfoSpot.notes={
-    hours:document.getElementById('note-hours').value.trim(),
-    fee:document.getElementById('note-fee').value.trim(),
-    phone:document.getElementById('note-phone').value.trim(),
-    website:document.getElementById('note-website').value.trim(),
-    memo:document.getElementById('note-memo').value.trim()
-  };
+  const data=readSpotDataFromForm('note');
+  const lat=parseFloat(data.lat),lng=parseFloat(data.lng);
+  if(!data.name){showToast('請輸入景點名稱');return;}
+  if(!Number.isFinite(lat)||!Number.isFinite(lng)){showToast('請輸入有效的緯度與經度');return;}
+  pendingInfoSpot.name=data.name;
+  pendingInfoSpot.addr=data.addr;
+  pendingInfoSpot.lat=lat;
+  pendingInfoSpot.lng=lng;
+  pendingInfoSpot.notes=data.notes;
+  document.getElementById('info-modal-title').textContent=pendingInfoSpot.name;
   saveLocal();
   renderSidebar();
+  renderMarkers();
   renderInfoView();
   showToast('筆記已儲存');
   document.getElementById('notes-saved-msg').textContent='✓ 已儲存到景點';
@@ -2402,15 +2469,21 @@ function saveNotes(){
 // Field mapping: JSON key → note field id + label
 const JSON_FIELD_MAP=[
   // opening hours variants
-  {keys:['opening_hours','hours','open_hours','business_hours','openingHours','businessHours','營業時間','開放時間'], field:'note-hours', label:'營業時間'},
+  {keys:['opening_hours','hours','open_hours','business_hours','openingHours','businessHours','營業時間','開放時間'], field:'note-hours', note:'hours', label:'營業時間'},
   // fee variants
-  {keys:['admission_fee','fee','ticket','price','entrance_fee','admissionFee','entranceFee','票價','門票','費用'], field:'note-fee', label:'門票費用'},
+  {keys:['admission_fee','fee','ticket','price','entrance_fee','admissionFee','entranceFee','票價','門票','費用'], field:'note-fee', note:'fee', label:'門票費用'},
   // phone variants
-  {keys:['phone','tel','telephone','contact_phone','contactPhone','電話','聯絡電話'], field:'note-phone', label:'電話'},
+  {keys:['phone','tel','telephone','contact_phone','contactPhone','電話','聯絡電話'], field:'note-phone', note:'phone', label:'電話'},
   // website variants
-  {keys:['website','url','link','homepage','官網','網站'], field:'note-website', label:'官網'},
+  {keys:['website','url','link','homepage','官網','網站'], field:'note-website', note:'website', label:'官網'},
   // remarks / memo variants
-  {keys:['remarks','memo','note','notes','description','備註','說明','注意事項'], field:'note-memo', label:'備註'},
+  {keys:['remarks','memo','note','notes','description','comment','備註','說明','注意事項'], field:'note-memo', note:'memo', label:'備註'},
+];
+const SPOT_FIELD_MAP=[
+  {keys:['name','title','place_name','placeName','spot_name','spotName','景點名稱','名稱'], prop:'name', label:'景點名稱'},
+  {keys:['address','addr','formatted_address','formattedAddress','location.address','地址'], prop:'addr', label:'地址'},
+  {keys:['lat','latitude','緯度'], prop:'lat', label:'緯度'},
+  {keys:['lng','lon','longitude','經度'], prop:'lng', label:'經度'}
 ];
 
 function flattenJSON(obj, prefix=''){
@@ -2428,6 +2501,66 @@ function flattenJSON(obj, prefix=''){
   }
   return result;
 }
+function findFlatValue(flat,keys){
+  for(const k of keys){
+    if(flat[k]!==undefined&&flat[k]!==null&&String(flat[k]).trim()!=='')return flat[k];
+    const lk=k.toLowerCase().replace(/[_\s.]/g,'');
+    const found=Object.entries(flat).find(([fk,fv])=>
+      fk.toLowerCase().replace(/[_\s.]/g,'')===lk &&
+      fv!==null && String(fv).trim()!==''
+    );
+    if(found)return found[1];
+  }
+  return null;
+}
+function extractSpotDataFromFlat(flat){
+  const data={notes:{}};
+  SPOT_FIELD_MAP.forEach(({keys,prop})=>{
+    const val=findFlatValue(flat,keys);
+    if(val!==null)data[prop]=String(val).trim();
+  });
+  JSON_FIELD_MAP.forEach(({keys,note})=>{
+    const val=findFlatValue(flat,keys);
+    if(val!==null)data.notes[note]=String(val).trim();
+  });
+  if(!Object.keys(data.notes).length)delete data.notes;
+  return data;
+}
+function setFieldValue(id,val){
+  const el=document.getElementById(id);
+  if(el&&val!==undefined&&val!==null)el.value=String(val);
+}
+function applySpotDataToForm(data,prefix){
+  const filled=[];
+  const labels={name:'景點名稱',addr:'地址',lat:'緯度',lng:'經度',hours:'營業時間',fee:'門票費用',phone:'電話',website:'官網',memo:'備註'};
+  ['name','addr','lat','lng'].forEach(k=>{
+    if(data[k]!==undefined){setFieldValue(`${prefix}-${k}`,data[k]);filled.push(labels[k]);}
+  });
+  if(data.notes){
+    Object.entries(data.notes).forEach(([k,v])=>{
+      setFieldValue(`${prefix}-${k}`,v);
+      filled.push(labels[k]||k);
+    });
+  }
+  return filled;
+}
+function readSpotDataFromForm(prefix){
+  const value=id=>document.getElementById(`${prefix}-${id}`)?.value.trim()||'';
+  const notes={
+    hours:value('hours'),
+    fee:value('fee'),
+    phone:value('phone'),
+    website:value('website'),
+    memo:value('memo')
+  };
+  return {
+    name:value('name'),
+    addr:value('addr'),
+    lat:value('lat'),
+    lng:value('lng'),
+    notes:Object.fromEntries(Object.entries(notes).filter(([,v])=>v))
+  };
+}
 
 function parseJsonIntoNotes(){
   const raw=document.getElementById('json-input').value.trim();
@@ -2437,35 +2570,13 @@ function parseJsonIntoNotes(){
   try{parsed=JSON.parse(raw);}
   catch(e){msg.style.color='#A32D2D';msg.textContent='JSON 格式錯誤：'+e.message;return;}
 
-  const flat=flattenJSON(parsed);
-  const filled=[];
-  const skipped=[];
-
-  JSON_FIELD_MAP.forEach(({keys,field,label})=>{
-    let val=null;
-    // try each alias key (case-insensitive, ignore underscores/camelCase)
-    for(const k of keys){
-      // try exact match
-      if(flat[k]!==undefined&&flat[k]!==null&&String(flat[k]).trim()!==''){val=flat[k];break;}
-      // try case-insensitive match across all keys
-      const lk=k.toLowerCase().replace(/[_\s]/g,'');
-      const found=Object.entries(flat).find(([fk,fv])=>
-        fk.toLowerCase().replace(/[_\s]/g,'')===lk &&
-        fv!==null && String(fv).trim()!==''
-      );
-      if(found){val=found[1];break;}
-    }
-    if(val!==null&&val!==undefined&&val!==''){
-      document.getElementById(field).value=String(val);
-      filled.push(label);
-    } else {
-      skipped.push(label);
-    }
-  });
+  const flat=flattenJSON(Array.isArray(parsed)?parsed[0]||{}:parsed);
+  const data=extractSpotDataFromFlat(flat);
+  const filled=applySpotDataToForm(data,'note');
 
   if(filled.length){
     msg.style.color='#0F6E56';
-    msg.textContent=`✓ 已填入：${filled.join('、')}${skipped.length?' （'+skipped.join('、')+' 未找到）':''}`;
+    msg.textContent=`✓ 已填入：${filled.join('、')}`;
     // collapse JSON area
     setTimeout(()=>{
       document.getElementById('json-paste-area').style.display='none';
@@ -2710,6 +2821,7 @@ function openImportModal(){
   document.getElementById('import-textarea').value='';
   document.getElementById('import-result').textContent='';
   document.getElementById('import-result').className='';
+  clearImportFields();
   document.getElementById('import-modal').classList.add('open');
 }
 
@@ -2725,6 +2837,7 @@ function setImportMode(mode){
   importMode=mode;
   document.querySelectorAll('.import-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
   document.getElementById('import-target-row').style.display=mode==='new'?'flex':'none';
+  document.getElementById('import-manual-new').style.display=mode==='new'?'block':'none';
   document.getElementById('import-match-row').style.display=mode==='info'?'block':'none';
   document.getElementById('import-hint-new').style.display=mode==='new'?'block':'none';
   document.getElementById('import-hint-info').style.display=mode==='info'?'block':'none';
@@ -2740,16 +2853,7 @@ const IMPORT_FIELD_MAP=[
 ];
 
 function extractNotesFromFlat(flat){
-  const notes={};
-  IMPORT_FIELD_MAP.forEach(({keys,note})=>{
-    for(const k of keys){
-      if(flat[k]!==undefined&&flat[k]!==null&&String(flat[k]).trim()!==''){notes[note]=String(flat[k]).trim();break;}
-      const lk=k.toLowerCase().replace(/[_\s]/g,'');
-      const found=Object.entries(flat).find(([fk,fv])=>fk.toLowerCase().replace(/[_\s]/g,'')===lk&&fv!==null&&String(fv).trim()!=='');
-      if(found){notes[note]=String(found[1]).trim();break;}
-    }
-  });
-  return notes;
+  return extractSpotDataFromFlat(flat).notes||{};
 }
 
 async function geocodeAddress(address){
@@ -2759,16 +2863,65 @@ async function geocodeAddress(address){
   if(!data.length)throw new Error(`找不到地址：${address}`);
   return{lat:parseFloat(data[0].lat),lng:parseFloat(data[0].lon)};
 }
+function clearImportFields(){
+  ['name','addr','lat','lng','hours','fee','phone','website','memo'].forEach(k=>setFieldValue(`import-${k}`,''));
+}
+function fillImportFieldsFromJson(){
+  const raw=document.getElementById('import-textarea').value.trim();
+  const resultEl=document.getElementById('import-result');
+  resultEl.className='';resultEl.textContent='';
+  if(!raw){resultEl.className='err';resultEl.textContent='請先在下方貼入 JSON';return;}
+  let parsed;
+  try{parsed=JSON.parse(raw);}
+  catch(e){resultEl.className='err';resultEl.textContent='JSON 格式錯誤：'+e.message;return;}
+  const first=Array.isArray(parsed)?parsed[0]||{}:parsed;
+  const data=extractSpotDataFromFlat(flattenJSON(first));
+  const filled=applySpotDataToForm(data,'import');
+  if(!filled.length){resultEl.className='err';resultEl.textContent='找不到可對應的欄位';return;}
+  resultEl.className='ok';
+  resultEl.textContent=`✓ 已填入欄位：${filled.join('、')}`;
+}
+function applySpotDataToExistingSpot(spot,data){
+  if(data.name)spot.name=data.name;
+  if(data.addr!==undefined)spot.addr=data.addr;
+  const lat=parseFloat(data.lat),lng=parseFloat(data.lng);
+  if(Number.isFinite(lat)&&Number.isFinite(lng)){spot.lat=lat;spot.lng=lng;}
+  if(data.notes)spot.notes={...spot.notes||{},...data.notes};
+}
+async function buildSpotFromData(data,resultEl){
+  const name=(data.name||'未命名景點').trim();
+  let lat=data.lat,lng=data.lng;
+  const addr=data.addr||'';
+  if((lat===''||lng===''||lat===undefined||lng===undefined)&&addr){
+    resultEl.textContent=`查詢座標中：${name}…`;
+    const coords=await geocodeAddress(addr);
+    lat=coords.lat;lng=coords.lng;
+  }
+  const latNum=parseFloat(lat),lngNum=parseFloat(lng);
+  if(!Number.isFinite(latNum)||!Number.isFinite(lngNum))throw new Error(`${name}：缺少有效座標或可查詢地址`);
+  const spot={
+    id:'imp_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    name,
+    addr:addr||`${latNum.toFixed(5)}, ${lngNum.toFixed(5)}`,
+    lat:latNum,lng:lngNum,
+    osmType:null,osmId:null
+  };
+  if(data.notes&&Object.keys(data.notes).length)spot.notes=data.notes;
+  return spot;
+}
 
 async function doImport(){
   const raw=document.getElementById('import-textarea').value.trim();
   const resultEl=document.getElementById('import-result');
   resultEl.className='';resultEl.textContent='';
-  if(!raw){resultEl.className='err';resultEl.textContent='請先貼入 JSON 內容';return;}
+  const hasManualNew=importMode==='new'&&['name','addr','lat','lng','hours','fee','phone','website','memo'].some(k=>document.getElementById(`import-${k}`)?.value.trim());
+  if(!raw&&!hasManualNew){resultEl.className='err';resultEl.textContent='請先貼入 JSON 或填寫手動欄位';return;}
 
   let parsed;
-  try{parsed=JSON.parse(raw);}
-  catch(e){resultEl.className='err';resultEl.textContent='JSON 格式錯誤：'+e.message;return;}
+  if(raw){
+    try{parsed=JSON.parse(raw);}
+    catch(e){resultEl.className='err';resultEl.textContent='JSON 格式錯誤：'+e.message;return;}
+  }
 
   // ── MODE: info — update existing spot ──
   if(importMode==='info'){
@@ -2777,55 +2930,35 @@ async function doImport(){
     if(!spotInfo){resultEl.className='err';resultEl.textContent='請選擇要補充的景點';return;}
     const spot=days[spotInfo.di].spots[spotInfo.si];
     const flat=flattenJSON(parsed);
-    const notes=extractNotesFromFlat(flat);
-    if(!Object.keys(notes).length){resultEl.className='err';resultEl.textContent='JSON 中找不到可對應的資訊欄位';return;}
-    spot.notes={...spot.notes||{},...notes};
-    saveLocal();renderSidebar();
-    const filled=Object.keys(notes).map(k=>({hours:'營業時間',fee:'門票',phone:'電話',website:'官網',memo:'備註'}[k])).filter(Boolean);
+    const data=extractSpotDataFromFlat(flat);
+    if(!Object.keys(data).length){resultEl.className='err';resultEl.textContent='JSON 中找不到可對應的欄位';return;}
+    applySpotDataToExistingSpot(spot,data);
+    saveLocal();renderSidebar();renderMarkers();
+    const labels={name:'景點名稱',addr:'地址',lat:'緯度',lng:'經度',hours:'營業時間',fee:'門票',phone:'電話',website:'官網',memo:'備註'};
+    const filled=[...['name','addr','lat','lng'].filter(k=>data[k]!==undefined).map(k=>labels[k]),...Object.keys(data.notes||{}).map(k=>labels[k])];
     resultEl.className='ok';resultEl.textContent=`✓ 已補充到「${spot.name}」：${filled.join('、')}`;
     return;
   }
 
   // ── MODE: new — add spot(s) to selected day ──
   const dayIdx=parseInt(document.getElementById('import-day-sel').value);
-  const items=Array.isArray(parsed)?parsed:[parsed];
+  const items=raw?(Array.isArray(parsed)?parsed:[parsed]):[readSpotDataFromForm('import')];
   resultEl.textContent='處理中…';
 
   const added=[],errors=[];
   for(const item of items){
-    const flat=flattenJSON(item);
-    // resolve name
-    const name=item.name||item['景點名稱']||item['名稱']||item.title||'未命名景點';
-    // resolve coordinates
-    let lat=item.lat??item.latitude??item['緯度']??null;
-    let lng=item.lng??item.lon??item.longitude??item['經度']??null;
-    // address fallback
-    const addr=item.address||item.addr||item['地址']||item.location?.address||'';
-    if((lat===null||lng===null)&&addr){
-      try{
-        resultEl.textContent=`查詢座標中：${name}…`;
-        const coords=await geocodeAddress(addr);
-        lat=coords.lat;lng=coords.lng;
-      }catch(e){errors.push(`${name}：${e.message}`);continue;}
-    }
-    if(lat===null||lng===null){errors.push(`${name}：缺少座標或地址`);continue;}
-    const notes=extractNotesFromFlat(flat);
+    const data=raw?extractSpotDataFromFlat(flattenJSON(item)):item;
     const arrivalTime=item.arrivalTime||item.arrival_time||item['抵達時間']||item['到達時間']||'';
     const leaveTime=item.leaveTime||item.leave_time||item.departureTime||item.departure_time||item['離開時間']||'';
     const stayMinutes=item.stayMinutes??item.stay_minutes??item.durationMinutes??item.duration_minutes??item['停留分鐘']??'';
-    const spot={
-      id:'imp_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
-      name:String(name).trim(),
-      addr:addr||`${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}`,
-      lat:parseFloat(lat),lng:parseFloat(lng),
-      osmType:null,osmId:null
-    };
-    if(Object.keys(notes).length)spot.notes=notes;
-    if(arrivalTime)spot.arrivalTime=String(arrivalTime);
-    if(leaveTime)spot.leaveTime=String(leaveTime);
-    if(stayMinutes!==''&&stayMinutes!==null&&stayMinutes!==undefined)spot.stayMinutes=Math.max(0,parseInt(stayMinutes,10)||0);
-    days[dayIdx].spots.push(spot);
-    added.push(spot.name);
+    try{
+      const spot=await buildSpotFromData(data,resultEl);
+      if(arrivalTime)spot.arrivalTime=String(arrivalTime);
+      if(leaveTime)spot.leaveTime=String(leaveTime);
+      if(stayMinutes!==''&&stayMinutes!==null&&stayMinutes!==undefined)spot.stayMinutes=Math.max(0,parseInt(stayMinutes,10)||0);
+      days[dayIdx].spots.push(spot);
+      added.push(spot.name);
+    }catch(e){errors.push(e.message);}
   }
 
   renderSidebar();renderMarkers();
@@ -2924,6 +3057,12 @@ document.getElementById('import-cancel-btn').onclick=()=>document.getElementById
 document.getElementById('import-modal').onclick=e=>{if(e.target===document.getElementById('import-modal'))document.getElementById('import-modal').classList.remove('open');};
 document.getElementById('import-go-btn').onclick=doImport;
 document.querySelectorAll('.import-mode-btn').forEach(b=>b.onclick=()=>setImportMode(b.dataset.mode));
+document.getElementById('import-fill-json-btn').onclick=fillImportFieldsFromJson;
+document.getElementById('import-clear-fields-btn').onclick=()=>{
+  clearImportFields();
+  document.getElementById('import-result').textContent='';
+  document.getElementById('import-result').className='';
+};
 // API toggle
 document.getElementById('api-toggle-wrap').onclick=()=>{
   if(!orsApiKey){document.getElementById('key-modal').classList.add('open');return;}
