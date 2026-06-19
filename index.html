@@ -793,7 +793,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .seg-connector{display:flex;align-items:stretch;padding:2px 0}
 .seg-timeline{display:flex;flex-direction:column;align-items:center;width:26px;flex-shrink:0}
 .seg-vline{width:2px;flex:1;background:var(--line);margin:0 auto}
-.seg-body{flex:1;min-width:0;display:flex;align-items:center;gap:5px;padding:3px 5px 3px 0}
+.seg-body{flex:1;min-width:0;display:flex;align-items:center;gap:5px;padding:3px 5px 3px 0;flex-wrap:wrap}
 .seg-mode-btns{display:flex;gap:2px;flex-shrink:0}
 .seg-mode-btn{width:24px;height:20px;border:1px solid var(--line);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--surface-soft);color:#9AA0A6;padding:0;transition:all .12s}
 .seg-mode-btn:hover{border-color:var(--primary);color:var(--primary-strong)}
@@ -801,14 +801,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .seg-mode-btn.active.bike{border-color:#BA7517;background:#FAEEDA;color:#854F0B}
 .seg-mode-btn.active.car{border-color:#7F77DD;background:#EEEDFE;color:#534AB7}
 .seg-mode-btn.active.transit{border-color:#D85A30;background:#FAECE7;color:#993C1D}
-.seg-result{flex:1;min-width:0;font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seg-result-wrap{flex:1;min-width:120px}
+.seg-result{display:block;min-width:0;font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .seg-result.walk{color:#0F6E56}.seg-result.bike{color:#854F0B}.seg-result.car{color:#534AB7}.seg-result.transit{color:#993C1D}
 .seg-result.muted{color:#aaa;font-weight:400}
 .seg-result.warn{color:#BA7517;font-weight:700}
+.seg-result.manual{color:#185FA5;font-weight:800}
 .seg-warning{display:inline-flex;align-items:center;margin-left:3px;padding:1px 5px;border-radius:5px;background:#fff9ef;border:1px solid #F0D6A5;color:#BA7517;font-size:10px;font-weight:800;vertical-align:middle}
+.seg-warning.manual{background:#E6F1FB;border-color:#9BC7F2;color:#185FA5}
 .seg-warning-text{display:block;margin-top:2px;color:#BA7517;font-size:10px;font-weight:700;line-height:1.35;white-space:normal}
-.seg-calc-btn{padding:2px 7px;border:1px solid var(--line);border-radius:7px;background:var(--surface);cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;flex-shrink:0}
-.seg-calc-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
+.seg-tool-btn,.seg-calc-btn{height:26px;padding:0 7px;border:1px solid var(--line);border-radius:7px;background:var(--surface);cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:4px}
+.seg-tool-btn:hover,.seg-calc-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
+.seg-tool-btn.danger:hover{background:#fff5f5;border-color:#fcc;color:var(--danger)}
+.seg-manual-editor{display:none;align-items:center;gap:6px;flex-basis:100%;padding:7px 8px;border:1px solid var(--line-soft);border-radius:9px;background:#FAFBFA}
+.seg-manual-editor.open{display:flex}
+.seg-manual-field{display:flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:4px 8px;color:var(--muted);font-size:11px;font-weight:700}
+.seg-manual-field input{width:58px;border:none;background:transparent;color:var(--text);font-size:13px;font-weight:800;font-family:inherit;outline:none}
+.seg-manual-save{height:28px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-size:11px;font-weight:800;padding:0 10px;cursor:pointer}
+.seg-manual-cancel{height:28px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--muted);font-size:11px;font-weight:800;padding:0 10px;cursor:pointer}
 /* empty */
 .empty-day{text-align:center;padding:28px 12px;color:#aaa;font-size:13px}
 .empty-day i{font-size:32px;display:block;margin-bottom:8px;color:#ccc}
@@ -1010,8 +1020,12 @@ body.mobile-ui #mobile-sheet{position:absolute;left:0;right:0;bottom:0;z-index:1
 #mobile-spot-list .seg-mode-btns{background:var(--surface-soft);border-radius:10px;padding:4px;gap:2px}
 #mobile-spot-list .seg-mode-btn{width:34px;height:32px;border:none;border-radius:8px;font-size:17px;background:transparent}
 #mobile-spot-list .seg-mode-btn.active{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)}
-#mobile-spot-list .seg-calc-btn{height:34px;border-radius:10px;font-size:12px;padding:0 10px}
+#mobile-spot-list .seg-tool-btn,#mobile-spot-list .seg-calc-btn{height:34px;border-radius:10px;font-size:12px;padding:0 10px}
 #mobile-spot-list .seg-result{font-size:14px}
+#mobile-spot-list .seg-result-wrap{min-width:160px}
+#mobile-spot-list .seg-manual-editor{gap:8px;padding:9px;align-items:stretch}
+#mobile-spot-list .seg-manual-field{flex:1;min-width:120px;height:40px;font-size:12px}
+#mobile-spot-list .seg-manual-save,#mobile-spot-list .seg-manual-cancel{height:40px;font-size:13px}
 .mobile-sheet-actions{position:absolute;left:0;right:0;bottom:0;padding:10px 16px calc(env(safe-area-inset-bottom) + 14px);background:linear-gradient(180deg,rgba(255,255,255,.88),#fff 30%);border-top:1px solid var(--line-soft);display:flex;align-items:center;gap:10px;z-index:4}
 .mobile-total{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;margin-right:auto;white-space:nowrap}
 .mobile-secondary-btn,.mobile-primary-btn{height:44px;border-radius:12px;font-size:15px;font-weight:750;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 14px;white-space:nowrap}
@@ -1251,6 +1265,7 @@ let useApiKey=false;
 let uiMode=localStorage.getItem('tp_ui_mode')||'auto';
 let mobileSheetState='half';
 let expandedTimelineIds=new Set();
+let expandedSegmentIds=new Set();
 const MOBILE_SHEET_STATES=['peek','half','full'];
 const MOBILE_SHEET_LABELS={peek:'景點日切換',half:'行程清單',full:'聚焦清單'};
 const UI_MODE_LABELS={auto:'版面：自動',desktop:'版面：桌面',mobile:'版面：手機'};
@@ -1417,9 +1432,8 @@ function formatClock(total){
   return `${h}:${m}`;
 }
 function getTravelMinutesFromSpot(spot){
-  const res=spot?.seg?.result;
-  if(!res||res.loading||res.error||!res.durationSec)return null;
-  return Math.round(res.durationSec/60);
+  const sec=getSegmentDurationSec(spot?.seg);
+  return sec===null?null:Math.round(sec/60);
 }
 function deriveLeaveFromStay(spot){
   const arr=parseClock(spot.arrivalTime);
@@ -1692,6 +1706,77 @@ document.addEventListener('click',e=>{
 });
 
 /* ── SPOT LIST ── */
+function renderSegmentConnector(spot,i){
+  const seg=spot.seg||{mode:'foot-walking',result:null};
+  if(!spot.seg)spot.seg=seg;
+  const mode=getMode(seg.mode);
+  const conn=document.createElement('div');
+  const expanded=expandedSegmentIds.has(spot.id);
+  conn.className='seg-connector';
+  const mbHtml=MODES.map(m=>`<button class="seg-mode-btn${seg.mode===m.id?' active '+m.cls:''}" data-mode="${m.id}" title="${m.label}"><i class="ti ${m.icon}"></i></button>`).join('');
+  conn.innerHTML=`
+    <div class="seg-timeline"><div class="seg-vline"></div></div>
+    <div class="seg-body">
+      <div class="seg-mode-btns">${mbHtml}</div>
+      <div class="seg-result-wrap">${segmentResultHtml(seg,mode)}</div>
+      <button class="seg-tool-btn seg-manual-toggle" type="button"><i class="ti ti-pencil"></i> ${expanded?'收合':'手動'}</button>
+      ${hasManualSegment(seg)?'<button class="seg-tool-btn danger seg-manual-clear" type="button"><i class="ti ti-x"></i> 清除</button>':''}
+      <button class="seg-calc-btn" type="button"><i class="ti ti-route"></i> 計算</button>
+      <div class="seg-manual-editor${expanded?' open':''}">
+        <label class="seg-manual-field">時間 <input class="seg-manual-duration" type="number" min="1" step="1" placeholder="分鐘" value="${seg.manualDurationMin??''}"> 分</label>
+        <label class="seg-manual-field">距離 <input class="seg-manual-distance" type="number" min="0" step="0.1" placeholder="選填" value="${seg.manualDistanceKm??''}"> km</label>
+        <button class="seg-manual-save" type="button"><i class="ti ti-check"></i> 套用</button>
+        <button class="seg-manual-cancel" type="button">取消</button>
+      </div>
+    </div>`;
+  conn.querySelectorAll('button,input').forEach(node=>{
+    node.addEventListener('click',e=>e.stopPropagation());
+    node.addEventListener('mousedown',e=>e.stopPropagation());
+  });
+  conn.querySelectorAll('.seg-mode-btn').forEach(btn=>{
+    btn.onclick=()=>{
+      const old=spot.seg||{};
+      spot.seg={mode:btn.dataset.mode,result:null};
+      if(hasManualSegment(old))spot.seg.manualDurationMin=old.manualDurationMin;
+      if(cleanPositiveNumber(old.manualDistanceKm)!==null)spot.seg.manualDistanceKm=old.manualDistanceKm;
+      recomputeTimeline(activeDay);
+      renderSidebar();
+      saveLocal();
+    };
+  });
+  conn.querySelector('.seg-calc-btn').onclick=()=>calcSegment(i);
+  conn.querySelector('.seg-manual-toggle').onclick=()=>{
+    if(expandedSegmentIds.has(spot.id))expandedSegmentIds.delete(spot.id);
+    else expandedSegmentIds.add(spot.id);
+    renderSidebar();
+  };
+  conn.querySelector('.seg-manual-cancel').onclick=()=>{
+    expandedSegmentIds.delete(spot.id);
+    renderSidebar();
+  };
+  conn.querySelector('.seg-manual-clear')?.addEventListener('click',()=>{
+    delete spot.seg.manualDurationMin;
+    delete spot.seg.manualDistanceKm;
+    expandedSegmentIds.delete(spot.id);
+    recomputeTimeline(activeDay);
+    renderSidebar();
+    saveLocal();
+  });
+  conn.querySelector('.seg-manual-save').onclick=()=>{
+    const duration=cleanPositiveNumber(conn.querySelector('.seg-manual-duration')?.value);
+    const distance=cleanPositiveNumber(conn.querySelector('.seg-manual-distance')?.value);
+    if(duration===null){showToast('請輸入路段時間，例如 58 分鐘');return;}
+    spot.seg.manualDurationMin=Math.round(duration);
+    if(distance===null)delete spot.seg.manualDistanceKm;
+    else spot.seg.manualDistanceKm=Number(distance.toFixed(1));
+    expandedSegmentIds.delete(spot.id);
+    recomputeTimeline(activeDay);
+    renderSidebar();
+    saveLocal();
+  };
+  return conn;
+}
+
 function renderSpotList(){
   recomputeTimeline(activeDay);
   const el=document.getElementById('spot-list');
@@ -1744,30 +1829,7 @@ function renderSpotList(){
 
     // segment connector
     if(!isLast){
-      const seg=spot.seg||{mode:'foot-walking',result:null};
-      if(!spot.seg)spot.seg=seg;
-      const mode=getMode(seg.mode);
-      const conn=document.createElement('div');
-      conn.className='seg-connector';
-      const mbHtml=MODES.map(m=>`<button class="seg-mode-btn${seg.mode===m.id?' active '+m.cls:''}" data-mode="${m.id}" title="${m.label}"><i class="ti ${m.icon}"></i></button>`).join('');
-      let rHtml='<span class="seg-result muted">—</span>';
-      if(seg.result){
-        if(seg.result.loading) rHtml=`<span class="seg-result muted"><i class="ti ti-loader-2"></i> 計算中</span>`;
-        else if(seg.result.error) rHtml=`<span class="seg-result muted" style="color:#e07" title="${seg.result.message||'路線計算失敗'}">${seg.result.message||'錯誤'}</span>`;
-        else rHtml=`<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${seg.result.warning||''}">${seg.result.duration} · ${seg.result.distance} ${formatRouteWarning(seg.result.warning)}${seg.result.warning?`<span class="seg-warning-text">已改用估算：${seg.result.warning}</span>`:''}</span>`;
-      }
-      conn.innerHTML=`
-        <div class="seg-timeline"><div class="seg-vline"></div></div>
-        <div class="seg-body">
-          <div class="seg-mode-btns">${mbHtml}</div>
-          <div class="seg-result-wrap" style="flex:1;min-width:0">${rHtml}</div>
-          <button class="seg-calc-btn"><i class="ti ti-route"></i> 計算</button>
-        </div>`;
-      conn.querySelectorAll('.seg-mode-btn').forEach(btn=>{
-        btn.onclick=()=>{spot.seg={mode:btn.dataset.mode,result:null};renderSidebar();saveLocal();};
-      });
-      conn.querySelector('.seg-calc-btn').onclick=()=>calcSegment(i);
-      el.appendChild(conn);
+      el.appendChild(renderSegmentConnector(spot,i));
     }
   });
 }
@@ -1817,30 +1879,7 @@ function renderMobileSpotList(){
     el.appendChild(card);
 
     if(!isLast){
-      const seg=spot.seg||{mode:'foot-walking',result:null};
-      if(!spot.seg)spot.seg=seg;
-      const mode=getMode(seg.mode);
-      const conn=document.createElement('div');
-      conn.className='seg-connector';
-      const mbHtml=MODES.map(m=>`<button class="seg-mode-btn${seg.mode===m.id?' active '+m.cls:''}" data-mode="${m.id}" title="${m.label}"><i class="ti ${m.icon}"></i></button>`).join('');
-      let rHtml='<span class="seg-result muted">—</span>';
-      if(seg.result){
-        if(seg.result.loading) rHtml=`<span class="seg-result muted"><i class="ti ti-loader-2"></i> 計算中</span>`;
-        else if(seg.result.error) rHtml=`<span class="seg-result muted" style="color:#e07" title="${seg.result.message||'路線計算失敗'}">${seg.result.message||'錯誤'}</span>`;
-        else rHtml=`<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${seg.result.warning||''}">${seg.result.duration} · ${seg.result.distance} ${formatRouteWarning(seg.result.warning)}${seg.result.warning?`<span class="seg-warning-text">已改用估算：${seg.result.warning}</span>`:''}</span>`;
-      }
-      conn.innerHTML=`
-        <div class="seg-timeline"><div class="seg-vline"></div></div>
-        <div class="seg-body">
-          <div class="seg-mode-btns">${mbHtml}</div>
-          <div class="seg-result-wrap" style="flex:1;min-width:0">${rHtml}</div>
-          <button class="seg-calc-btn"><i class="ti ti-route"></i> 計算</button>
-        </div>`;
-      conn.querySelectorAll('.seg-mode-btn').forEach(btn=>{
-        btn.onclick=()=>{spot.seg={mode:btn.dataset.mode,result:null};renderSidebar();saveLocal();};
-      });
-      conn.querySelector('.seg-calc-btn').onclick=()=>calcSegment(i);
-      el.appendChild(conn);
+      el.appendChild(renderSegmentConnector(spot,i));
     }
   });
 }
@@ -2032,6 +2071,48 @@ function describeFetchFailure(service,err){
 function formatRouteWarning(warning){
   return warning?`<span class="seg-warning" title="${warning}">估算</span>`:'';
 }
+function cleanPositiveNumber(val){
+  const n=parseFloat(val);
+  return Number.isFinite(n)&&n>0?n:null;
+}
+function hasManualSegment(seg){
+  return cleanPositiveNumber(seg?.manualDurationMin)!==null;
+}
+function getSegmentDurationSec(seg){
+  const manual=cleanPositiveNumber(seg?.manualDurationMin);
+  if(manual!==null)return manual*60;
+  const res=seg?.result;
+  if(!res||res.loading||res.error||!res.durationSec)return null;
+  return res.durationSec;
+}
+function getSegmentDistanceM(seg){
+  const manual=cleanPositiveNumber(seg?.manualDistanceKm);
+  if(manual!==null)return manual*1000;
+  const res=seg?.result;
+  if(!res||res.loading||res.error||!res.distanceM)return null;
+  return res.distanceM;
+}
+function segmentDurationText(seg){
+  const sec=getSegmentDurationSec(seg);
+  return sec===null?'—':fmtDur(sec);
+}
+function segmentDistanceText(seg){
+  const m=getSegmentDistanceM(seg);
+  return m===null?'':fmtDist(m);
+}
+function segmentResultHtml(seg,mode){
+  const manual=hasManualSegment(seg);
+  const manualDistance=segmentDistanceText(seg);
+  if(manual){
+    const auto=seg.result&&!seg.result.loading&&!seg.result.error&&seg.result.durationSec
+      ?`<span class="seg-warning-text">自動參考：${seg.result.duration} · ${seg.result.distance}${seg.result.warning?'（估算）':''}</span>`:'';
+    return `<span class="seg-result manual">${segmentDurationText(seg)}${manualDistance?` · ${manualDistance}`:''} <span class="seg-warning manual">手動</span>${auto}</span>`;
+  }
+  if(!seg.result)return '<span class="seg-result muted">—</span>';
+  if(seg.result.loading)return `<span class="seg-result muted"><i class="ti ti-loader-2"></i> 計算中</span>`;
+  if(seg.result.error)return `<span class="seg-result muted" style="color:#e07" title="${esc(seg.result.message||'路線計算失敗')}">${seg.result.message||'錯誤'}</span>`;
+  return `<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${esc(seg.result.warning||'')}">${seg.result.duration} · ${seg.result.distance} ${formatRouteWarning(seg.result.warning)}${seg.result.warning?`<span class="seg-warning-text">已改用估算：${seg.result.warning}</span>`:''}</span>`;
+}
 
 async function fetchSegment(a,b,modeId){
   const mode=getMode(modeId);
@@ -2095,6 +2176,7 @@ async function calcSegment(i){
     const res=await fetchSegment(a,b,a.seg.mode);
     a.seg.result={loading:false,error:false,...res};
   }catch(e){a.seg.result={loading:false,error:true,message:e.message||'路線計算失敗'};}
+  recomputeTimeline(activeDay);
   renderSidebar();saveLocal();
 }
 
@@ -2113,7 +2195,7 @@ async function showAllRoutes(){
   if(spots.length<2){alert('請先加入至少 2 個景點');return;}
   for(let i=0;i<spots.length-1;i++){
     if(!spots[i].seg)spots[i].seg={mode:'foot-walking',result:null};
-    if(!spots[i].seg.result||spots[i].seg.result.error)await calcSegment(i);
+    if(!hasManualSegment(spots[i].seg)&&(!spots[i].seg.result||spots[i].seg.result.error))await calcSegment(i);
   }
   const ri=document.getElementById('route-info');
   ri.style.display='block';
@@ -2121,13 +2203,22 @@ async function showAllRoutes(){
   for(let i=0;i<spots.length-1;i++){
     const a=spots[i],b=spots[i+1];
     const mode=getMode(a.seg?.mode||'foot-walking');
-    const res=a.seg?.result;
+    const seg=a.seg||{};
+    const res=seg.result;
+    const durationSec=getSegmentDurationSec(seg);
+    const distanceM=getSegmentDistanceM(seg);
     if(res&&!res.error&&!res.loading&&res.coords){
       const layer=L.polyline(res.coords,{color:mode.color,weight:4,opacity:.85}).addTo(map);
       routeLayers.push(layer);res.coords.forEach(c=>allBounds.push(c));
-      totalSec+=res.durationSec||0;totalM+=res.distanceM||0;
-      const warn=res.warning?` <span title="${res.warning}" style="color:#BA7517;font-size:10px">估算</span>`:'';
-      segsHtml+=`<div class="ri-seg-row"><i class="ti ${mode.icon} ri-seg-icon" style="color:${mode.color};font-size:13px"></i><span class="ri-seg-lbl">${a.name.slice(0,8)} → ${b.name.slice(0,8)}</span><span class="ri-seg-val" style="color:${res.warning?'#BA7517':mode.color}">${res.duration} · ${res.distance}${warn}</span></div>`;
+      totalSec+=durationSec||0;totalM+=distanceM||0;
+      const tag=hasManualSegment(seg)
+        ?` <span title="使用手動路段時間" style="color:#185FA5;font-size:10px">手動</span>`
+        :(res.warning?` <span title="${res.warning}" style="color:#BA7517;font-size:10px">估算</span>`:'');
+      const color=hasManualSegment(seg)?'#185FA5':(res.warning?'#BA7517':mode.color);
+      segsHtml+=`<div class="ri-seg-row"><i class="ti ${mode.icon} ri-seg-icon" style="color:${mode.color};font-size:13px"></i><span class="ri-seg-lbl">${a.name.slice(0,8)} → ${b.name.slice(0,8)}</span><span class="ri-seg-val" style="color:${color}">${segmentDurationText(seg)}${segmentDistanceText(seg)?` · ${segmentDistanceText(seg)}`:''}${tag}</span></div>`;
+    }else if(durationSec!==null){
+      totalSec+=durationSec;totalM+=distanceM||0;
+      segsHtml+=`<div class="ri-seg-row"><i class="ti ${mode.icon} ri-seg-icon" style="color:${mode.color};font-size:13px"></i><span class="ri-seg-lbl">${a.name.slice(0,8)} → ${b.name.slice(0,8)}</span><span class="ri-seg-val" style="color:#185FA5">${segmentDurationText(seg)}${segmentDistanceText(seg)?` · ${segmentDistanceText(seg)}`:''} <span title="使用手動路段時間" style="font-size:10px">手動</span></span></div>`;
     }else{
       segsHtml+=`<div class="ri-seg-row"><i class="ti ti-minus ri-seg-icon" style="color:#ccc;font-size:13px"></i><span class="ri-seg-lbl">${a.name.slice(0,8)} → ${b.name.slice(0,8)}</span><span class="ri-seg-val" style="color:#ccc">未計算</span></div>`;
     }
@@ -2417,7 +2508,12 @@ function exportJSON(){
         stayMinutes:s.stayMinutes??'',
         timeAutoArrival:!!s.timeAutoArrival,
         timeAutoLeave:!!s.timeAutoLeave,
-        seg:s.seg?{mode:s.seg.mode,result:s.seg.result&&!s.seg.result.loading?s.seg.result:null}:null
+        seg:s.seg?{
+          mode:s.seg.mode,
+          manualDurationMin:s.seg.manualDurationMin??'',
+          manualDistanceKm:s.seg.manualDistanceKm??'',
+          result:s.seg.result&&!s.seg.result.loading?s.seg.result:null
+        }:null
       }))
     }))
   };
@@ -2520,8 +2616,10 @@ function exportKML(){
     // Placemarks for each spot
     day.spots.forEach((spot,si)=>{
       const seg=si<day.spots.length-1?spot.seg:null;
-      const segNote=seg?.result&&!seg.result.error&&!seg.result.loading
-        ?`\n交通方式：${getMode(seg.mode).label}　時間：${seg.result.duration}　距離：${seg.result.distance}`:'';
+      const segSec=seg?getSegmentDurationSec(seg):null;
+      const segDist=seg?getSegmentDistanceM(seg):null;
+      const segNote=seg&&segSec!==null
+        ?`\n交通方式：${getMode(seg.mode).label}　時間：${fmtDur(segSec)}${segDist!==null?`　距離：${fmtDist(segDist)}`:''}${hasManualSegment(seg)?'　來源：手動':''}`:'';
       kml+=`${INDENT}${INDENT}<Placemark>
       <name>${esc(`${si+1}. ${spot.name}`)}</name>
       <description><![CDATA[<b>${esc(spot.name)}</b><br>${esc(spot.addr||'')}${segNote?`<br><i>${esc(segNote)}</i>`:''}]]></description>
@@ -2570,8 +2668,9 @@ function showSummary(){
     d.spots.forEach((s,i)=>{
       msg+=`  ${i+1}. ${s.name}`;
       if(s.arrivalTime||s.leaveTime)msg+=`  (${s.arrivalTime||'--:--'} → ${s.leaveTime||'--:--'})`;
-      if(s.seg?.result&&!s.seg.result.error&&!s.seg.result.loading)
-        msg+=`  [${getMode(s.seg.mode).label}: ${s.seg.result.duration} / ${s.seg.result.distance}]`;
+      const segSec=getSegmentDurationSec(s.seg);
+      if(segSec!==null)
+        msg+=`  [${getMode(s.seg.mode).label}: ${fmtDur(segSec)}${getSegmentDistanceM(s.seg)!==null?` / ${fmtDist(getSegmentDistanceM(s.seg))}`:''}${hasManualSegment(s.seg)?' / 手動':''}]`;
       msg+='\n';total++;
     });
   });
