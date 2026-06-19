@@ -813,6 +813,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .seg-tool-btn,.seg-calc-btn{height:26px;padding:0 7px;border:1px solid var(--line);border-radius:7px;background:var(--surface);cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:4px}
 .seg-tool-btn:hover,.seg-calc-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 .seg-tool-btn.danger:hover{background:#fff5f5;border-color:#fcc;color:var(--danger)}
+.seg-google-route{background:#E8F5E9;border-color:#A5D6A7;color:#2E7D32;text-decoration:none}
+.seg-google-route:hover{background:#C8E6C9;border-color:#66BB6A;color:#1B5E20}
 .seg-manual-editor{display:none;align-items:center;gap:6px;flex-basis:100%;padding:7px 8px;border:1px solid var(--line-soft);border-radius:9px;background:#FAFBFA}
 .seg-manual-editor.open{display:flex}
 .seg-manual-field{display:flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:4px 8px;color:var(--muted);font-size:11px;font-weight:700}
@@ -1710,6 +1712,8 @@ function renderSegmentConnector(spot,i){
   const seg=spot.seg||{mode:'foot-walking',result:null};
   if(!spot.seg)spot.seg=seg;
   const mode=getMode(seg.mode);
+  const nextSpot=days[activeDay]?.spots?.[i+1];
+  const googleRouteUrl=nextSpot?googleDirectionsUrl(spot,nextSpot,seg.mode):'#';
   const conn=document.createElement('div');
   const expanded=expandedSegmentIds.has(spot.id);
   conn.className='seg-connector';
@@ -1723,13 +1727,14 @@ function renderSegmentConnector(spot,i){
       ${hasManualSegment(seg)?'<button class="seg-tool-btn danger seg-manual-clear" type="button"><i class="ti ti-x"></i> 清除</button>':''}
       <button class="seg-calc-btn" type="button"><i class="ti ti-route"></i> 計算</button>
       <div class="seg-manual-editor${expanded?' open':''}">
+        <a class="seg-tool-btn seg-google-route" href="${googleRouteUrl}" target="_blank" rel="noopener"><i class="ti ti-brand-google-maps"></i> Google 路線</a>
         <label class="seg-manual-field">時間 <input class="seg-manual-duration" type="number" min="1" step="1" placeholder="分鐘" value="${seg.manualDurationMin??''}"> 分</label>
         <label class="seg-manual-field">距離 <input class="seg-manual-distance" type="number" min="0" step="0.1" placeholder="選填" value="${seg.manualDistanceKm??''}"> km</label>
         <button class="seg-manual-save" type="button"><i class="ti ti-check"></i> 套用</button>
         <button class="seg-manual-cancel" type="button">取消</button>
       </div>
     </div>`;
-  conn.querySelectorAll('button,input').forEach(node=>{
+  conn.querySelectorAll('button,input,a').forEach(node=>{
     node.addEventListener('click',e=>e.stopPropagation());
     node.addEventListener('mousedown',e=>e.stopPropagation());
   });
@@ -2112,6 +2117,20 @@ function segmentResultHtml(seg,mode){
   if(seg.result.loading)return `<span class="seg-result muted"><i class="ti ti-loader-2"></i> 計算中</span>`;
   if(seg.result.error)return `<span class="seg-result muted" style="color:#e07" title="${esc(seg.result.message||'路線計算失敗')}">${seg.result.message||'錯誤'}</span>`;
   return `<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${esc(seg.result.warning||'')}">${seg.result.duration} · ${seg.result.distance} ${formatRouteWarning(seg.result.warning)}${seg.result.warning?`<span class="seg-warning-text">已改用估算：${seg.result.warning}</span>`:''}</span>`;
+}
+function googleRoutePlaceParam(spot){
+  const text=[spot?.name,spot?.addr].filter(Boolean).join(' ').trim();
+  if(text)return encodeURIComponent(text);
+  return encodeURIComponent(`${spot.lat},${spot.lng}`);
+}
+function googleDirectionsUrl(origin,destination,modeId){
+  const travelmode={
+    'foot-walking':'walking',
+    'cycling-regular':'bicycling',
+    'driving-car':'driving',
+    transit:'transit'
+  }[modeId]||'driving';
+  return `https://www.google.com/maps/dir/?api=1&origin=${googleRoutePlaceParam(origin)}&destination=${googleRoutePlaceParam(destination)}&travelmode=${travelmode}`;
 }
 
 async function fetchSegment(a,b,modeId){
