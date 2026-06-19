@@ -762,6 +762,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .time-picker-close{width:30px;height:30px;border:none;border-radius:8px;background:transparent;color:var(--muted);font-size:18px;cursor:pointer}
 .time-picker-close:hover{background:var(--surface-soft);color:var(--text)}
 .time-picker-display{height:40px;border-radius:10px;background:var(--primary-soft);color:var(--primary-strong);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:850;margin-bottom:10px}
+.time-picker-hint{font-size:11px;color:var(--muted);line-height:1.5;margin:-2px 0 9px;text-align:center}
 .time-picker-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .time-picker-col{border:1px solid var(--line-soft);border-radius:10px;background:#FAFBFA;overflow:hidden}
 .time-picker-col-title{position:sticky;top:0;background:#FAFBFA;font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.3px;padding:7px 8px;border-bottom:1px solid var(--line-soft)}
@@ -771,7 +772,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .time-option.active{background:var(--primary);color:#fff}
 .time-picker-actions{display:flex;gap:8px;margin-top:10px}
 .time-picker-actions button{flex:1;height:34px;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer}
-.time-clear-btn{border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.time-cancel-btn,.time-clear-btn{border:1px solid var(--line);background:var(--surface);color:var(--muted)}
 .time-done-btn{border:none;background:var(--primary);color:#fff}
 .spot-actions{display:flex;gap:2px;flex-shrink:0}
 .spot-btn{width:20px;height:20px;border:none;background:none;cursor:pointer;color:#B4B8BE;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;padding:0}
@@ -794,6 +795,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .seg-result{flex:1;min-width:0;font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .seg-result.walk{color:#0F6E56}.seg-result.bike{color:#854F0B}.seg-result.car{color:#534AB7}.seg-result.transit{color:#993C1D}
 .seg-result.muted{color:#aaa;font-weight:400}
+.seg-result.warn{color:#BA7517;font-weight:700}
+.seg-warning{display:inline-flex;align-items:center;margin-left:3px;padding:1px 5px;border-radius:5px;background:#fff9ef;border:1px solid #F0D6A5;color:#BA7517;font-size:10px;font-weight:800;vertical-align:middle}
 .seg-calc-btn{padding:2px 7px;border:1px solid var(--line);border-radius:7px;background:var(--surface);cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;flex-shrink:0}
 .seg-calc-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 /* empty */
@@ -1509,6 +1512,7 @@ function attachTimelineHandlers(root,i){
 
 let timePickerTarget=null;
 let timePickerValue='09:00';
+let timePickerDraftMinutes=540;
 function normalizeTimeValue(val){
   const parsed=parseClock(val);
   if(parsed!==null)return formatClock(parsed);
@@ -1517,8 +1521,14 @@ function normalizeTimeValue(val){
   return formatClock(now.getHours()*60+rounded);
 }
 function timePickerParts(){
-  const parsed=parseClock(timePickerValue)??540;
-  return {hour:Math.floor(parsed/60),minute:parsed%60};
+  return {hour:Math.floor(timePickerDraftMinutes/60),minute:timePickerDraftMinutes%60};
+}
+function updateTimePickerSelection(){
+  const picker=document.getElementById('time-picker');
+  const {hour,minute}=timePickerParts();
+  picker.querySelector('.time-picker-display').textContent=formatClock(timePickerDraftMinutes);
+  picker.querySelectorAll('[data-hour]').forEach(btn=>btn.classList.toggle('active',Number(btn.dataset.hour)===hour));
+  picker.querySelectorAll('[data-minute]').forEach(btn=>btn.classList.toggle('active',Number(btn.dataset.minute)===minute));
 }
 function renderTimePicker(){
   const picker=document.getElementById('time-picker');
@@ -1535,6 +1545,7 @@ function renderTimePicker(){
       <button type="button" class="time-picker-close" title="關閉"><i class="ti ti-x"></i></button>
     </div>
     <div class="time-picker-display">${timeLabel(timePickerValue)}</div>
+    <div class="time-picker-hint">先選小時與分鐘，按「完成」後才會套用到行程。</div>
     <div class="time-picker-grid">
       <div class="time-picker-col">
         <div class="time-picker-col-title">小時</div>
@@ -1546,6 +1557,7 @@ function renderTimePicker(){
       </div>
     </div>
     <div class="time-picker-actions">
+      <button type="button" class="time-cancel-btn">取消</button>
       <button type="button" class="time-clear-btn">清除</button>
       <button type="button" class="time-done-btn">完成</button>
     </div>`;
@@ -1553,21 +1565,25 @@ function renderTimePicker(){
   picker.querySelectorAll('[data-hour]').forEach(btn=>{
     btn.onclick=()=>{
       const parts=timePickerParts();
-      timePickerValue=formatClock(Number(btn.dataset.hour)*60+parts.minute);
-      renderTimePicker();
+      timePickerDraftMinutes=Number(btn.dataset.hour)*60+parts.minute;
+      timePickerValue=formatClock(timePickerDraftMinutes);
+      updateTimePickerSelection();
     };
   });
   picker.querySelectorAll('[data-minute]').forEach(btn=>{
     btn.onclick=()=>{
       const parts=timePickerParts();
-      timePickerValue=formatClock(parts.hour*60+Number(btn.dataset.minute));
-      renderTimePicker();
+      timePickerDraftMinutes=parts.hour*60+Number(btn.dataset.minute);
+      timePickerValue=formatClock(timePickerDraftMinutes);
+      updateTimePickerSelection();
     };
   });
+  picker.querySelector('.time-cancel-btn').onclick=closeTimePicker;
   picker.querySelector('.time-clear-btn').onclick=()=>commitPickedTime('');
   picker.querySelector('.time-done-btn').onclick=()=>commitPickedTime(timePickerValue);
   requestAnimationFrame(()=>{
-    picker.querySelector('.time-option.active')?.scrollIntoView({block:'center'});
+    picker.querySelector('[data-hour].active')?.scrollIntoView({block:'center'});
+    picker.querySelector('[data-minute].active')?.scrollIntoView({block:'center'});
   });
 }
 function positionTimePicker(anchor){
@@ -1591,6 +1607,7 @@ function openTimePicker(anchor,spot,field,idx){
     label:field==='arrivalTime'?'選擇抵達時間':'選擇離開時間'
   };
   timePickerValue=normalizeTimeValue(spot[field]);
+  timePickerDraftMinutes=parseClock(timePickerValue)??540;
   const picker=document.getElementById('time-picker');
   renderTimePicker();
   positionTimePicker(anchor);
@@ -1624,7 +1641,7 @@ document.addEventListener('click',e=>{
   const picker=document.getElementById('time-picker');
   if(!picker?.classList.contains('open'))return;
   if(picker.contains(e.target)||e.target.closest('.time-select'))return;
-  closeTimePicker();
+  e.preventDefault();
 });
 
 /* ── SPOT LIST ── */
@@ -1689,8 +1706,8 @@ function renderSpotList(){
       let rHtml='<span class="seg-result muted">—</span>';
       if(seg.result){
         if(seg.result.loading) rHtml=`<span class="seg-result muted"><i class="ti ti-loader-2"></i> 計算中</span>`;
-        else if(seg.result.error) rHtml=`<span class="seg-result muted" style="color:#e07">錯誤</span>`;
-        else rHtml=`<span class="seg-result ${mode.cls}">${seg.result.duration} · ${seg.result.distance}</span>`;
+        else if(seg.result.error) rHtml=`<span class="seg-result muted" style="color:#e07" title="${seg.result.message||'路線計算失敗'}">${seg.result.message||'錯誤'}</span>`;
+        else rHtml=`<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${seg.result.warning||''}">${seg.result.duration} · ${seg.result.distance} ${formatRouteWarning(seg.result.warning)}</span>`;
       }
       conn.innerHTML=`
         <div class="seg-timeline"><div class="seg-vline"></div></div>
@@ -1762,8 +1779,8 @@ function renderMobileSpotList(){
       let rHtml='<span class="seg-result muted">—</span>';
       if(seg.result){
         if(seg.result.loading) rHtml=`<span class="seg-result muted"><i class="ti ti-loader-2"></i> 計算中</span>`;
-        else if(seg.result.error) rHtml=`<span class="seg-result muted" style="color:#e07">錯誤</span>`;
-        else rHtml=`<span class="seg-result ${mode.cls}">${seg.result.duration} · ${seg.result.distance}</span>`;
+        else if(seg.result.error) rHtml=`<span class="seg-result muted" style="color:#e07" title="${seg.result.message||'路線計算失敗'}">${seg.result.message||'錯誤'}</span>`;
+        else rHtml=`<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${seg.result.warning||''}">${seg.result.duration} · ${seg.result.distance} ${formatRouteWarning(seg.result.warning)}</span>`;
       }
       conn.innerHTML=`
         <div class="seg-timeline"><div class="seg-vline"></div></div>
@@ -1947,42 +1964,67 @@ function haversine(a,b){
   const x=Math.sin(dLat/2)**2+Math.cos(a.lat*toR)*Math.cos(b.lat*toR)*Math.sin(dLng/2)**2;
   return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
+function describeRouteError(source,status,msg=''){
+  if(source==='ORS'){
+    if(status===401||status===403)return 'API Key 無效或額度受限';
+    if(status===404)return 'ORS 找不到可行路線';
+    if(status===429)return 'ORS 請求過多';
+    if(status)return `ORS ${status}`;
+    return msg||'ORS 連線失敗';
+  }
+  return msg||'路線服務暫時無法使用';
+}
+function formatRouteWarning(warning){
+  return warning?`<span class="seg-warning" title="${warning}">估算</span>`:'';
+}
 
 async function fetchSegment(a,b,modeId){
   const mode=getMode(modeId);
   const isTransit=modeId==='transit';
+  let apiWarning='';
 
   if(useApiKey&&orsApiKey){
     // ── ORS: real per-mode routing ──
-    const profile=isTransit?'foot-walking':mode.ors;
-    const url=`https://api.openrouteservice.org/v2/directions/${profile}?api_key=${orsApiKey}&start=${a.lng},${a.lat}&end=${b.lng},${b.lat}`;
-    const res=await fetch(url,{headers:{Accept:'application/json'}});
-    if(!res.ok)throw new Error(`ORS ${res.status}`);
-    const data=await res.json();
-    const seg=data.features[0].properties.segments[0];
-    const coords=data.features[0].geometry.coordinates.map(c=>[c[1],c[0]]);
-    const dur=isTransit?seg.duration*0.5:seg.duration;
-    const suffix=isTransit?' (估算)':'';
-    return{duration:fmtDur(dur)+suffix,distance:fmtDist(seg.distance),durationSec:dur,distanceM:seg.distance,coords};
+    try{
+      const profile=isTransit?'foot-walking':mode.ors;
+      const url=`https://api.openrouteservice.org/v2/directions/${profile}?api_key=${orsApiKey}&start=${a.lng},${a.lat}&end=${b.lng},${b.lat}`;
+      const res=await fetch(url,{headers:{Accept:'application/json'}});
+      let data=null;
+      try{data=await res.json();}catch(e){}
+      if(!res.ok)throw new Error(describeRouteError('ORS',res.status,data?.error?.message||data?.message||''));
+      const seg=data?.features?.[0]?.properties?.segments?.[0];
+      const coords=data?.features?.[0]?.geometry?.coordinates?.map(c=>[c[1],c[0]]);
+      if(!seg||!coords?.length)throw new Error('ORS 回傳格式不完整');
+      const dur=isTransit?seg.duration*0.5:seg.duration;
+      const suffix=isTransit?' (估算)':'';
+      return{duration:fmtDur(dur)+suffix,distance:fmtDist(seg.distance),durationSec:dur,distanceM:seg.distance,coords,source:'ORS'};
+    }catch(e){
+      apiWarning=e.message||describeRouteError('ORS');
+    }
   }
 
   // ── OSRM car for road distance + speed-based duration ──
   let distM,coords;
-  const osrmProfile=isTransit?'car':mode.osrm;
-  try{
-    const url=`https://router.project-osrm.org/route/v1/${osrmProfile}/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`;
-    const res=await fetch(url);
-    const data=await res.json();
-    if(data.code==='Ok'&&data.routes.length){
-      distM=data.routes[0].distance;
-      coords=data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+  const profiles=[isTransit?'car':mode.osrm,'car'].filter((v,i,arr)=>v&&arr.indexOf(v)===i);
+  for(const osrmProfile of profiles){
+    try{
+      const url=`https://router.project-osrm.org/route/v1/${osrmProfile}/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`;
+      const res=await fetch(url);
+      const data=await res.json();
+      if(data.code==='Ok'&&data.routes.length){
+        distM=data.routes[0].distance;
+        coords=data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+        break;
+      }
+    }catch(e){
+      // Keep trying the next fallback profile.
     }
-  }catch(e){}
+  }
   if(!distM){distM=haversine(a,b)*1.35;coords=[[a.lat,a.lng],[b.lat,b.lng]];}
   const speed=mode.speed;
   const durSec=distM/speed;
   const suffix=isTransit?' (估算)':'';
-  return{duration:fmtDur(durSec)+suffix,distance:fmtDist(distM),durationSec:durSec,distanceM:distM,coords};
+  return{duration:fmtDur(durSec)+suffix,distance:fmtDist(distM),durationSec:durSec,distanceM:distM,coords,source:'estimate',warning:apiWarning};
 }
 
 async function calcSegment(i){
@@ -1995,7 +2037,7 @@ async function calcSegment(i){
   try{
     const res=await fetchSegment(a,b,a.seg.mode);
     a.seg.result={loading:false,error:false,...res};
-  }catch(e){a.seg.result={loading:false,error:true};}
+  }catch(e){a.seg.result={loading:false,error:true,message:e.message||'路線計算失敗'};}
   renderSidebar();saveLocal();
 }
 
@@ -2027,7 +2069,8 @@ async function showAllRoutes(){
       const layer=L.polyline(res.coords,{color:mode.color,weight:4,opacity:.85}).addTo(map);
       routeLayers.push(layer);res.coords.forEach(c=>allBounds.push(c));
       totalSec+=res.durationSec||0;totalM+=res.distanceM||0;
-      segsHtml+=`<div class="ri-seg-row"><i class="ti ${mode.icon} ri-seg-icon" style="color:${mode.color};font-size:13px"></i><span class="ri-seg-lbl">${a.name.slice(0,8)} → ${b.name.slice(0,8)}</span><span class="ri-seg-val" style="color:${mode.color}">${res.duration} · ${res.distance}</span></div>`;
+      const warn=res.warning?` <span title="${res.warning}" style="color:#BA7517;font-size:10px">估算</span>`:'';
+      segsHtml+=`<div class="ri-seg-row"><i class="ti ${mode.icon} ri-seg-icon" style="color:${mode.color};font-size:13px"></i><span class="ri-seg-lbl">${a.name.slice(0,8)} → ${b.name.slice(0,8)}</span><span class="ri-seg-val" style="color:${res.warning?'#BA7517':mode.color}">${res.duration} · ${res.distance}${warn}</span></div>`;
     }else{
       segsHtml+=`<div class="ri-seg-row"><i class="ti ti-minus ri-seg-icon" style="color:#ccc;font-size:13px"></i><span class="ri-seg-lbl">${a.name.slice(0,8)} → ${b.name.slice(0,8)}</span><span class="ri-seg-val" style="color:#ccc">未計算</span></div>`;
     }
