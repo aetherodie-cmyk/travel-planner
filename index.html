@@ -1933,8 +1933,19 @@ function notesSummaryHtml(spot,{standalone=false}={}){
     <div class="info-note-card">${rows}</div>
   </div>`;
 }
+function externalSpotLinksHtml(spot){
+  const query=[spot.name,spot.addr].filter(Boolean).join(' ');
+  const q=encodeURIComponent(query);
+  const gmapsUrl=`https://www.google.com/maps/search/?api=1&query=${q}`;
+  const gsearchUrl=`https://www.google.com/search?q=${encodeURIComponent(`${query} 營業時間 門票`)}`;
+  return `<div class="ext-links">
+    <a class="ext-btn gmaps" href="${gmapsUrl}" target="_blank"><i class="ti ti-brand-google-maps"></i> Google Maps</a>
+    <a class="ext-btn gsearch" href="${gsearchUrl}" target="_blank"><i class="ti ti-search"></i> Google 搜尋</a>
+  </div>`;
+}
 function renderSpotNotesInfo(spot){
-  return `${notesSummaryHtml(spot,{standalone:true})}
+  return `${externalSpotLinksHtml(spot)}
+    ${notesSummaryHtml(spot,{standalone:true})}
     <div class="info-note">已優先顯示已儲存筆記，未查詢外部資料 · <span style="cursor:pointer;color:var(--primary-strong)" onclick="switchInfoTab('notes')">編輯筆記 →</span></div>`;
 }
 function openInfoModal(spotId){
@@ -1967,13 +1978,7 @@ function openInfoModal(spotId){
 
 async function fetchSpotInfo(spot){
   const body=document.getElementById('im-pane-osm');
-  const q=encodeURIComponent(spot.name+' '+spot.addr);
-  const gmapsUrl=`https://www.google.com/maps/search/?api=1&query=${q}`;
-  const gsearchUrl=`https://www.google.com/search?q=${encodeURIComponent(spot.name+' '+spot.addr+' 營業時間 門票')}`;
-  const extHtml=`<div class="ext-links">
-    <a class="ext-btn gmaps" href="${gmapsUrl}" target="_blank"><i class="ti ti-brand-google-maps"></i> Google Maps</a>
-    <a class="ext-btn gsearch" href="${gsearchUrl}" target="_blank"><i class="ti ti-search"></i> Google 搜尋</a>
-  </div>`;
+  const extHtml=externalSpotLinksHtml(spot);
   try{
     const revUrl=`https://nominatim.openstreetmap.org/reverse?lat=${spot.lat}&lon=${spot.lng}&format=json&addressdetails=1&extratags=1&namedetails=1`;
     const revRes=await fetch(revUrl,{headers:{'Accept-Language':'zh-TW,zh;q=0.9,en;q=0.8'}});
