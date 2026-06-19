@@ -1174,6 +1174,21 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
     <div id="info-modal-body">
       <div class="info-view active" id="info-view"></div>
       <div class="info-edit" id="info-edit">
+        <div class="info-action-row" style="margin-bottom:8px">
+          <button class="json-paste-trigger" id="json-paste-btn" type="button"><i class="ti ti-code"></i> 貼入 JSON 自動填入</button>
+        </div>
+        <div class="spot-json-panel" id="json-paste-area">
+          <textarea id="json-input" placeholder='例：{ "name": "十和田湖", "address": "青森縣十和田市", "lat": 40.468, "lng": 140.878, "opening_hours": "全天開放", "admission_fee": "免費", "phone": "0176-75-2425", "website": "https://example.com", "remarks": "注意天候" }'></textarea>
+          <div class="spot-json-actions">
+            <button class="notes-save-btn" id="json-parse-btn" type="button" style="margin-top:0"><i class="ti ti-check"></i> 解析到欄位</button>
+            <button class="info-cancel-btn" id="json-cancel-btn" type="button"><i class="ti ti-x"></i> 取消</button>
+          </div>
+          <div class="spot-json-msg" id="json-parse-msg"></div>
+        </div>
+        <div class="spot-form-section-title"><i class="ti ti-calendar"></i> 行程位置</div>
+        <div class="spot-form-grid full">
+          <div class="spot-form-field"><label>加入 / 移動到</label><select class="import-day-sel" id="note-day" style="height:38px"></select></div>
+        </div>
         <div class="spot-form-section-title"><i class="ti ti-map-pin"></i> 景點資料</div>
         <div class="spot-form-grid">
           <div class="spot-form-field"><label>景點名稱</label><input id="note-name" placeholder="例：十和田湖"/></div>
@@ -1190,17 +1205,6 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         </div>
         <div class="spot-form-grid full">
           <div class="spot-form-field"><label>個人備註</label><textarea id="note-memo" placeholder="行前提醒、停車資訊、推薦餐廳…"></textarea></div>
-        </div>
-        <div class="info-action-row" style="margin-bottom:8px">
-          <button class="json-paste-trigger" id="json-paste-btn" type="button"><i class="ti ti-code"></i> 貼入 JSON 自動填入</button>
-        </div>
-        <div class="spot-json-panel" id="json-paste-area">
-          <textarea id="json-input" placeholder='例：{ "name": "十和田湖", "address": "青森縣十和田市", "lat": 40.468, "lng": 140.878, "opening_hours": "全天開放", "admission_fee": "免費", "phone": "0176-75-2425", "website": "https://example.com", "remarks": "注意天候" }'></textarea>
-          <div class="spot-json-actions">
-            <button class="notes-save-btn" id="json-parse-btn" type="button" style="margin-top:0"><i class="ti ti-check"></i> 解析到欄位</button>
-            <button class="info-cancel-btn" id="json-cancel-btn" type="button"><i class="ti ti-x"></i> 取消</button>
-          </div>
-          <div class="spot-json-msg" id="json-parse-msg"></div>
         </div>
         <div class="info-action-row">
           <button class="notes-save-btn" id="notes-save-btn" style="margin-top:0"><i class="ti ti-device-floppy"></i> 儲存到景點</button>
@@ -2071,9 +2075,7 @@ function moveSpotToDay(di){
   renderSidebar();renderMarkers();clearRouteLayers();
 }
 function onMapClick(e){
-  const name=prompt('景點名稱（取消則不新增）：','');
-  if(name===null)return;
-  addSpot({id:'c_'+Date.now(),name:name||'自訂景點',addr:'',lat:e.latlng.lat,lng:e.latlng.lng,osmId:null});
+  openSpotCreateModal({lat:e.latlng.lat.toFixed(6),lng:e.latlng.lng.toFixed(6)});
 }
 
 /* ═══════════════ SEARCH ═══════════════ */
@@ -2366,7 +2368,29 @@ function setInfoMode(mode){
   document.getElementById('info-view').classList.toggle('active',mode==='view');
   document.getElementById('info-edit').classList.toggle('active',mode==='edit');
 }
+let spotEditorMode='edit';
+function findSpotPosition(spot){
+  for(let di=0;di<days.length;di++){
+    const si=days[di].spots.indexOf(spot);
+    if(si>-1)return{di,si};
+  }
+  return{di:activeDay,si:-1};
+}
+function populateNoteDaySelect(selectedIdx=activeDay){
+  const sel=document.getElementById('note-day');
+  if(!sel)return;
+  sel.innerHTML=days.map((d,i)=>`<option value="${i}"${i===selectedIdx?' selected':''}>${d.name}</option>`).join('');
+}
+function resetEditorJsonPanel(){
+  const area=document.getElementById('json-paste-area');
+  if(area)area.style.display='none';
+  setFieldValue('json-input','');
+  const msg=document.getElementById('json-parse-msg');
+  if(msg)msg.textContent='';
+}
 function loadNoteInputs(spot){
+  const loc=findSpotPosition(spot);
+  populateNoteDaySelect(loc.di);
   const n=spot.notes||{};
   document.getElementById('note-name').value=spot.name||'';
   document.getElementById('note-addr').value=spot.addr||'';
@@ -2377,13 +2401,46 @@ function loadNoteInputs(spot){
   document.getElementById('note-phone').value=n.phone||'';
   document.getElementById('note-website').value=n.website||'';
   document.getElementById('note-memo').value=n.memo||'';
+  resetEditorJsonPanel();
+}
+function clearNoteInputs(selectedIdx=activeDay){
+  populateNoteDaySelect(selectedIdx);
+  ['name','addr','lat','lng','hours','fee','phone','website','memo'].forEach(k=>setFieldValue(`note-${k}`,''));
+  resetEditorJsonPanel();
+}
+function setEditorSaveLabel(){
+  const btn=document.getElementById('notes-save-btn');
+  if(btn)btn.innerHTML=spotEditorMode==='create'
+    ?'<i class="ti ti-map-pin-plus"></i> 新增到行程'
+    :'<i class="ti ti-device-floppy"></i> 儲存到景點';
+}
+function openSpotEditModal(spot){
+  pendingInfoSpot=spot;
+  spotEditorMode='edit';
+  document.getElementById('info-modal-title').textContent=`編輯：${spot.name}`;
+  document.getElementById('notes-saved-msg').textContent='';
+  loadNoteInputs(spot);
+  setEditorSaveLabel();
+  document.getElementById('info-modal').classList.add('open');
+  setInfoMode('edit');
+}
+function openSpotCreateModal(initialData={}){
+  pendingInfoSpot=null;
+  spotEditorMode='create';
+  document.getElementById('info-modal-title').textContent='新增景點';
+  document.getElementById('notes-saved-msg').textContent='';
+  clearNoteInputs(initialData.dayIdx??activeDay);
+  applySpotDataToForm(initialData,'note');
+  setEditorSaveLabel();
+  document.getElementById('info-modal').classList.add('open');
+  setInfoMode('edit');
 }
 function renderInfoView(){
   if(!pendingInfoSpot)return;
   const view=document.getElementById('info-view');
   view.innerHTML=renderSpotInfoView(pendingInfoSpot);
   const editBtn=document.getElementById('info-edit-note-btn');
-  if(editBtn)editBtn.onclick=()=>{loadNoteInputs(pendingInfoSpot);setInfoMode('edit');};
+  if(editBtn)editBtn.onclick=()=>openSpotEditModal(pendingInfoSpot);
   setInfoMode('view');
 }
 function openInfoModal(spotId){
@@ -2392,6 +2449,8 @@ function openInfoModal(spotId){
   pendingInfoSpot=spot;
   document.getElementById('info-modal-title').textContent=spot.name;
   loadNoteInputs(spot);
+  spotEditorMode='edit';
+  setEditorSaveLabel();
   document.getElementById('notes-saved-msg').textContent='';
   document.getElementById('info-modal').classList.add('open');
   renderInfoView();
@@ -2444,25 +2503,52 @@ function switchInfoTab(pane){
   setInfoMode(pane==='notes'?'edit':'view');
 }
 
-function saveNotes(){
-  if(!pendingInfoSpot)return;
+function moveExistingSpotToDay(spot,targetDayIdx){
+  const loc=findSpotPosition(spot);
+  if(loc.si<0||loc.di===targetDayIdx)return;
+  days[loc.di].spots.splice(loc.si,1);
+  if(days[loc.di].spots[loc.si-1])delete days[loc.di].spots[loc.si-1].seg;
+  delete spot.seg;
+  days[targetDayIdx].spots.push(spot);
+}
+async function saveNotes(){
   const data=readSpotDataFromForm('note');
-  const lat=parseFloat(data.lat),lng=parseFloat(data.lng);
+  const targetDayIdx=parseInt(document.getElementById('note-day').value,10)||activeDay;
   if(!data.name){showToast('請輸入景點名稱');return;}
-  if(!Number.isFinite(lat)||!Number.isFinite(lng)){showToast('請輸入有效的緯度與經度');return;}
-  pendingInfoSpot.name=data.name;
-  pendingInfoSpot.addr=data.addr;
-  pendingInfoSpot.lat=lat;
-  pendingInfoSpot.lng=lng;
-  pendingInfoSpot.notes=data.notes;
-  document.getElementById('info-modal-title').textContent=pendingInfoSpot.name;
-  saveLocal();
-  renderSidebar();
-  renderMarkers();
-  renderInfoView();
-  showToast('筆記已儲存');
-  document.getElementById('notes-saved-msg').textContent='✓ 已儲存到景點';
-  setTimeout(()=>{document.getElementById('notes-saved-msg').textContent='';},2000);
+  const msg=document.getElementById('notes-saved-msg');
+  try{
+    const normalized=await buildSpotFromData(data,msg);
+    if(spotEditorMode==='create'){
+      days[targetDayIdx].spots.push(normalized);
+      activeDay=targetDayIdx;
+      saveLocal();
+      renderSidebar();renderMarkers();clearRouteLayers();
+      map.setView([normalized.lat,normalized.lng],14);
+      showToast(`已新增到「${days[targetDayIdx].name}」`);
+      document.getElementById('info-modal').classList.remove('open');
+      return;
+    }
+    if(!pendingInfoSpot)return;
+    pendingInfoSpot.name=normalized.name;
+    pendingInfoSpot.addr=normalized.addr;
+    pendingInfoSpot.lat=normalized.lat;
+    pendingInfoSpot.lng=normalized.lng;
+    pendingInfoSpot.notes=normalized.notes||{};
+    moveExistingSpotToDay(pendingInfoSpot,targetDayIdx);
+    activeDay=targetDayIdx;
+    document.getElementById('info-modal-title').textContent=pendingInfoSpot.name;
+    saveLocal();
+    renderSidebar();
+    renderMarkers();
+    clearRouteLayers();
+    renderInfoView();
+    showToast('景點已儲存');
+    msg.textContent=`✓ 已儲存到「${days[targetDayIdx].name}」`;
+    setTimeout(()=>{msg.textContent='';},2000);
+  }catch(e){
+    showToast(e.message||'儲存失敗');
+    msg.textContent=e.message||'儲存失敗';
+  }
 }
 
 /* ── JSON paste & parse ── */
@@ -2812,6 +2898,8 @@ function showSummary(){
 let importMode='new'; // 'new' | 'info'
 
 function openImportModal(){
+  openSpotCreateModal();
+  return;
   // populate day selector
   const daySel=document.getElementById('import-day-sel');
   daySel.innerHTML=days.map((d,i)=>`<option value="${i}"${i===activeDay?' selected':''}>${d.name}</option>`).join('');
@@ -3101,7 +3189,10 @@ document.getElementById('move-modal').onclick=e=>{if(e.target===document.getElem
 document.getElementById('info-modal-x').onclick=()=>document.getElementById('info-modal').classList.remove('open');
 document.getElementById('info-modal').onclick=e=>{if(e.target===document.getElementById('info-modal'))document.getElementById('info-modal').classList.remove('open');};
 document.getElementById('notes-save-btn').onclick=saveNotes;
-document.getElementById('notes-cancel-btn').onclick=()=>{loadNoteInputs(pendingInfoSpot);renderInfoView();};
+document.getElementById('notes-cancel-btn').onclick=()=>{
+  if(spotEditorMode==='create'||!pendingInfoSpot)document.getElementById('info-modal').classList.remove('open');
+  else{loadNoteInputs(pendingInfoSpot);renderInfoView();}
+};
 if(document.getElementById('json-paste-btn'))document.getElementById('json-paste-btn').onclick=()=>{
   const area=document.getElementById('json-paste-area');
   area.style.display=area.style.display==='none'?'block':'none';
