@@ -746,6 +746,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .spot-name{font-size:13px;font-weight:750;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .spot-meta{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .timeline-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px}
+.timeline-summary{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px}
+.timeline-summary-pill{display:inline-flex;align-items:center;gap:5px;min-height:28px;border-radius:9px;background:var(--surface-soft);border:1px solid var(--line-soft);padding:4px 8px;color:var(--text);font-size:12px;font-weight:800}
+.timeline-summary-pill.muted{color:var(--muted);font-weight:700}
+.timeline-edit-btn,.timeline-auto-btn{border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--muted);height:28px;padding:0 8px;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:800;cursor:pointer}
+.timeline-edit-btn:hover,.timeline-auto-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
+.timeline-editor{display:none;margin-top:7px;padding:8px;border:1px solid var(--line-soft);border-radius:12px;background:#FAFBFA}
+.timeline-editor.open{display:block}
+.time-note{width:100%;font-size:11px;line-height:1.45;color:var(--muted);padding:0 2px}
+.time-note.warn{color:#BA7517;font-weight:700}
 .time-chip{display:flex;align-items:center;gap:6px;background:var(--surface-soft);border:1px solid var(--line-soft);border-radius:9px;padding:4px 6px 4px 8px;font-size:11px;font-weight:700;color:var(--muted);min-height:32px}
 .time-chip span{white-space:nowrap}
 .time-chip input{width:50px;border:none;background:transparent;color:var(--text);font-size:13px;font-weight:700;font-family:inherit;outline:none;padding:1px 0}
@@ -797,6 +806,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .seg-result.muted{color:#aaa;font-weight:400}
 .seg-result.warn{color:#BA7517;font-weight:700}
 .seg-warning{display:inline-flex;align-items:center;margin-left:3px;padding:1px 5px;border-radius:5px;background:#fff9ef;border:1px solid #F0D6A5;color:#BA7517;font-size:10px;font-weight:800;vertical-align:middle}
+.seg-warning-text{display:block;margin-top:2px;color:#BA7517;font-size:10px;font-weight:700;line-height:1.35;white-space:normal}
 .seg-calc-btn{padding:2px 7px;border:1px solid var(--line);border-radius:7px;background:var(--surface);cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;flex-shrink:0}
 .seg-calc-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 /* empty */
@@ -1258,6 +1268,7 @@ let orsApiKey='';
 let useApiKey=false;
 let uiMode=localStorage.getItem('tp_ui_mode')||'auto';
 let mobileSheetState='half';
+let expandedTimelineIds=new Set();
 const MOBILE_SHEET_STATES=['peek','half','full'];
 const MOBILE_SHEET_LABELS={peek:'景點日切換',half:'行程清單',full:'聚焦清單'};
 const UI_MODE_LABELS={auto:'版面：自動',desktop:'版面：桌面',mobile:'版面：手機'};
@@ -1445,9 +1456,17 @@ function recomputeTimeline(dayIdx=activeDay){
       const prevLeave=parseClock(prev.leaveTime);
       const travel=getTravelMinutesFromSpot(prev);
       if(prevLeave!==null&&travel!==null){
-        spot.arrivalTime=formatClock(prevLeave+travel);
-        spot.timeAutoArrival=true;
+        const expected=formatClock(prevLeave+travel);
+        spot.expectedArrivalTime=expected;
+        if(spot.timeAutoArrival!==false||!spot.arrivalTime){
+          spot.arrivalTime=expected;
+          spot.timeAutoArrival=true;
+        }
+      }else{
+        spot.expectedArrivalTime='';
       }
+    }else{
+      spot.expectedArrivalTime='';
     }
     if(spot.arrivalTime&&spot.stayMinutes!==undefined&&spot.stayMinutes!==''&&(spot.timeAutoLeave||!spot.leaveTime)){
       deriveLeaveFromStay(spot);
@@ -1465,18 +1484,48 @@ function timeButtonHtml(field,val,disabled=false){
   const cls=field==='arrivalTime'?'time-arrival':'time-leave';
   return `<button class="time-select ${cls}" type="button" data-time-field="${field}" ${disabled?'disabled':''}><span>${timeLabel(val)}</span><i class="ti ti-clock"></i></button>`;
 }
+function minutesDiffText(actual,expected){
+  const a=parseClock(actual),e=parseClock(expected);
+  if(a===null||e===null)return '';
+  let diff=a-e;
+  if(diff>720)diff-=1440;
+  if(diff<-720)diff+=1440;
+  if(diff===0)return '符合自動預估';
+  return `手動調整 ${diff>0?'+':''}${diff} 分`;
+}
 function timelineHtml(spot,i,spots){
   const travelMissing=i>0&&parseClock(spots[i-1]?.leaveTime)!==null&&getTravelMinutesFromSpot(spots[i-1])===null;
-  return `<div class="timeline-row" data-time-idx="${i}">
-    <label class="time-chip"><span>抵達</span>${timeButtonHtml('arrivalTime',spot.arrivalTime,i>0)}</label>
-    <label class="time-chip"><span>停留</span><input class="time-stay" type="number" min="0" step="5" placeholder="分" value="${spot.stayMinutes??''}"></label>
-    <label class="time-chip"><span>離開</span>${timeButtonHtml('leaveTime',spot.leaveTime)}</label>
-    ${travelMissing?'<span class="time-chip warn"><i class="ti ti-route"></i> 先計算路段</span>':''}
+  const expanded=expandedTimelineIds.has(spot.id);
+  const hasAny=spot.arrivalTime||spot.leaveTime||spot.stayMinutes!==undefined&&spot.stayMinutes!=='';
+  const range=spot.arrivalTime||spot.leaveTime?`${timeLabel(spot.arrivalTime)} → ${timeLabel(spot.leaveTime)}`:'未排時間';
+  const stay=spot.stayMinutes!==undefined&&spot.stayMinutes!==''?`停留 ${spot.stayMinutes} 分`:'停留未設定';
+  const manualNote=i>0&&spot.arrivalTime&&spot.expectedArrivalTime&&spot.timeAutoArrival===false?minutesDiffText(spot.arrivalTime,spot.expectedArrivalTime):'';
+  const autoNote=i>0&&spot.expectedArrivalTime&&spot.timeAutoArrival!==false?`自動預估抵達 ${spot.expectedArrivalTime}`:'';
+  return `<div class="timeline-box" data-time-idx="${i}">
+    <div class="timeline-summary">
+      <span class="timeline-summary-pill${hasAny?'':' muted'}"><i class="ti ti-clock"></i> ${range}</span>
+      <span class="timeline-summary-pill muted">${stay}</span>
+      ${manualNote?`<span class="timeline-summary-pill muted" title="自動預估 ${spot.expectedArrivalTime}">${manualNote}</span>`:''}
+      ${travelMissing?'<span class="time-chip warn"><i class="ti ti-route"></i> 先計算路段</span>':''}
+      <button class="timeline-edit-btn" type="button"><i class="ti ti-pencil"></i> ${expanded?'收合':'編輯時間'}</button>
+    </div>
+    <div class="timeline-editor${expanded?' open':''}">
+      <div class="timeline-row">
+        <label class="time-chip"><span>抵達</span>${timeButtonHtml('arrivalTime',spot.arrivalTime)}</label>
+        <label class="time-chip"><span>停留</span><input class="time-stay" type="number" min="0" step="5" placeholder="分" value="${spot.stayMinutes??''}"></label>
+        <label class="time-chip"><span>離開</span>${timeButtonHtml('leaveTime',spot.leaveTime)}</label>
+        ${i>0&&spot.timeAutoArrival===false?'<button class="timeline-auto-btn" type="button"><i class="ti ti-refresh"></i> 恢復自動</button>':''}
+        ${manualNote?`<div class="time-note warn">目前為手動抵達時間；自動預估是 ${spot.expectedArrivalTime}，${manualNote}。</div>`:''}
+        ${autoNote?`<div class="time-note">${autoNote}。可手動修改，系統會標注與預估的差異。</div>`:''}
+        ${i>0&&!spot.expectedArrivalTime?'<div class="time-note">上一段路線尚未計算時，抵達時間可手動填寫；計算路段後會產生自動預估作為比較。</div>':''}
+      </div>
+    </div>
   </div>`;
 }
 function attachTimelineHandlers(root,i){
+  const box=root.querySelector('.timeline-box');
   const row=root.querySelector('.timeline-row');
-  if(!row)return;
+  if(!box||!row)return;
   const stop=e=>e.stopPropagation();
   row.querySelectorAll('input,button').forEach(input=>{
     input.addEventListener('click',stop);
@@ -1484,6 +1533,13 @@ function attachTimelineHandlers(root,i){
     input.addEventListener('touchstart',stop,{passive:true});
   });
   const spot=days[activeDay].spots[i];
+  const editBtn=box.querySelector('.timeline-edit-btn');
+  editBtn?.addEventListener('click',e=>{
+    e.stopPropagation();
+    if(expandedTimelineIds.has(spot.id))expandedTimelineIds.delete(spot.id);
+    else expandedTimelineIds.add(spot.id);
+    renderSidebar();
+  });
   const commitStay=e=>{
     const v=e.target.value;
     spot.stayMinutes=v===''?'':Math.max(0,parseInt(v,10)||0);
@@ -1493,6 +1549,15 @@ function attachTimelineHandlers(root,i){
   };
   const stay=row.querySelector('.time-stay');
   const leave=row.querySelector('.time-leave');
+  const autoBtn=row.querySelector('.timeline-auto-btn');
+  autoBtn?.addEventListener('click',e=>{
+    e.stopPropagation();
+    spot.timeAutoArrival=true;
+    if(spot.expectedArrivalTime)spot.arrivalTime=spot.expectedArrivalTime;
+    if(spot.arrivalTime&&spot.stayMinutes!==undefined&&spot.stayMinutes!=='')deriveLeaveFromStay(spot);
+    recomputeTimeline(activeDay);
+    saveLocal();renderSidebar();
+  });
   row.querySelectorAll('.time-select').forEach(btn=>{
     btn.addEventListener('click',e=>{
       e.stopPropagation();
@@ -1707,7 +1772,7 @@ function renderSpotList(){
       if(seg.result){
         if(seg.result.loading) rHtml=`<span class="seg-result muted"><i class="ti ti-loader-2"></i> 計算中</span>`;
         else if(seg.result.error) rHtml=`<span class="seg-result muted" style="color:#e07" title="${seg.result.message||'路線計算失敗'}">${seg.result.message||'錯誤'}</span>`;
-        else rHtml=`<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${seg.result.warning||''}">${seg.result.duration} · ${seg.result.distance} ${formatRouteWarning(seg.result.warning)}</span>`;
+        else rHtml=`<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${seg.result.warning||''}">${seg.result.duration} · ${seg.result.distance} ${formatRouteWarning(seg.result.warning)}${seg.result.warning?`<span class="seg-warning-text">已改用估算：${seg.result.warning}</span>`:''}</span>`;
       }
       conn.innerHTML=`
         <div class="seg-timeline"><div class="seg-vline"></div></div>
@@ -1762,7 +1827,7 @@ function renderMobileSpotList(){
         </div>
       </div>`;
     const si=card.querySelector('.spot-item');
-    si.onclick=e=>{if(!e.target.closest('button'))openInfoModal(spot.id);};
+    si.onclick=e=>{if(!e.target.closest('button')&&!e.target.closest('.timeline-box'))openInfoModal(spot.id);};
     card.querySelector('.spot-btn.del').onclick=e=>{e.stopPropagation();removeSpot(i);};
     card.querySelector('.spot-btn.move').onclick=e=>{e.stopPropagation();openMoveModal(i);};
     card.querySelector('.spot-btn.info-btn').onclick=e=>{e.stopPropagation();openInfoModal(spot.id);};
@@ -1780,7 +1845,7 @@ function renderMobileSpotList(){
       if(seg.result){
         if(seg.result.loading) rHtml=`<span class="seg-result muted"><i class="ti ti-loader-2"></i> 計算中</span>`;
         else if(seg.result.error) rHtml=`<span class="seg-result muted" style="color:#e07" title="${seg.result.message||'路線計算失敗'}">${seg.result.message||'錯誤'}</span>`;
-        else rHtml=`<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${seg.result.warning||''}">${seg.result.duration} · ${seg.result.distance} ${formatRouteWarning(seg.result.warning)}</span>`;
+        else rHtml=`<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${seg.result.warning||''}">${seg.result.duration} · ${seg.result.distance} ${formatRouteWarning(seg.result.warning)}${seg.result.warning?`<span class="seg-warning-text">已改用估算：${seg.result.warning}</span>`:''}</span>`;
       }
       conn.innerHTML=`
         <div class="seg-timeline"><div class="seg-vline"></div></div>
@@ -1965,11 +2030,12 @@ function haversine(a,b){
   return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
 function describeRouteError(source,status,msg=''){
+  const detail=msg?`：${msg}`:'';
   if(source==='ORS'){
-    if(status===401||status===403)return 'API Key 無效或額度受限';
-    if(status===404)return 'ORS 找不到可行路線';
-    if(status===429)return 'ORS 請求過多';
-    if(status)return `ORS ${status}`;
+    if(status===401||status===403)return `API Key 無效、權限不足或額度受限${detail}`;
+    if(status===404)return `ORS 找不到可行路線${detail}`;
+    if(status===429)return `ORS 請求過多或額度已達上限${detail}`;
+    if(status)return `ORS ${status}${detail}`;
     return msg||'ORS 連線失敗';
   }
   return msg||'路線服務暫時無法使用';
