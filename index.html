@@ -863,13 +863,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 #key-status{font-size:11px;color:#888;margin-top:6px;min-height:16px}
 /* info modal */
 #info-modal .modal-box{width:400px;padding:0;overflow:hidden}
-#info-modal-tabs{display:flex;border-bottom:1px solid #eee}
-.im-tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:500;color:#888;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
-.im-tab.active{color:#185FA5;border-bottom-color:#378ADD}
-.im-tab:hover:not(.active){color:#555}
-#info-modal-panes{padding:16px;max-height:480px;overflow-y:auto}
-.im-pane{display:none}
-.im-pane.active{display:block}
+#info-modal-body{padding:16px;max-height:520px;overflow-y:auto}
+.info-view,.info-edit{display:none}
+.info-view.active,.info-edit.active{display:block}
+.info-action-row{display:flex;align-items:center;gap:8px;margin-top:12px}
+.info-edit-btn,.info-cancel-btn{height:36px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 12px}
+.info-edit-btn{border:1px solid var(--primary);background:var(--primary-soft);color:var(--primary-strong)}
+.info-edit-btn:hover{background:#DDF0E0}
+.info-cancel-btn{border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.info-empty-note{border:1px dashed var(--line);border-radius:var(--radius-md);background:#FAFBFA;color:var(--muted);font-size:13px;line-height:1.6;padding:18px 14px;text-align:center}
 .info-section{margin-bottom:12px}
 .info-label{font-size:10px;color:#aaa;font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px}
 .info-value{font-size:13px;color:#111;line-height:1.5}
@@ -1021,7 +1023,7 @@ body.mobile-ui #route-info{left:14px;right:74px;bottom:calc(var(--mobile-sheet-h
 body.mobile-ui #toast{bottom:calc(env(safe-area-inset-bottom) + 22px)}
 body.mobile-ui #info-modal{align-items:flex-end;justify-content:center}
 body.mobile-ui #info-modal .modal-box{width:100%;max-height:88dvh;border-radius:18px 18px 0 0}
-body.mobile-ui #info-modal-panes{max-height:calc(88dvh - 92px);padding-bottom:calc(env(safe-area-inset-bottom) + 18px)}
+body.mobile-ui #info-modal-body{max-height:calc(88dvh - 92px);padding-bottom:calc(env(safe-area-inset-bottom) + 18px)}
 body.mobile-ui #key-modal .modal-box,body.mobile-ui #import-modal .modal-box,body.mobile-ui #move-modal .modal-box{width:calc(100vw - 24px);max-height:86dvh}
 body.mobile-ui .time-picker-popover{left:12px!important;right:12px!important;bottom:calc(env(safe-area-inset-bottom) + 12px)!important;top:auto!important;width:auto;border-radius:18px;padding:14px}
 body.mobile-ui .time-picker-options{max-height:224px}
@@ -1117,38 +1119,18 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
 <div class="overlay" id="info-modal">
   <div class="modal-box">
     <div class="modal-hd" style="padding:14px 16px 0"><h2 id="info-modal-title" style="font-size:14px;font-weight:600;color:#111">景點資訊</h2><button class="modal-x" id="info-modal-x">×</button></div>
-    <div id="info-modal-tabs">
-      <div class="im-tab active" data-pane="osm"><i class="ti ti-database" style="font-size:13px"></i> 景點資料</div>
-      <div class="im-tab" data-pane="notes"><i class="ti ti-pencil" style="font-size:13px"></i> 我的筆記</div>
-    </div>
-    <div id="info-modal-panes">
-      <div class="im-pane active" id="im-pane-osm">
-        <div class="info-loading"><i class="ti ti-loader-2"></i> 查詢中…</div>
-      </div>
-      <div class="im-pane" id="im-pane-notes">
-        <!-- JSON paste area -->
-        <div id="json-paste-wrap">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-            <div class="notes-row-label" style="display:block;margin:0;flex:1">貼入 JSON 自動填入</div>
-            <button id="json-paste-btn" class="json-paste-trigger"><i class="ti ti-code"></i> 貼入 JSON</button>
-          </div>
-          <div id="json-paste-area" style="display:none">
-            <textarea class="notes-field" id="json-input" style="min-height:100px;font-family:monospace;font-size:12px" placeholder='貼上 JSON，例如：&#10;{&#10;  "opening_hours": "09:00-17:00",&#10;  "admission_fee": "全票 200 元",&#10;  "phone": "02-2345-6789",&#10;  "website": "https://...",&#10;  "remarks": "備註文字"&#10;}'></textarea>
-            <div style="display:flex;gap:6px;margin-top:6px">
-              <button id="json-parse-btn" class="notes-save-btn" style="margin:0;flex:1"><i class="ti ti-wand"></i> 解析並填入</button>
-              <button id="json-cancel-btn" class="key-sec-btn" style="padding:7px 12px">取消</button>
-            </div>
-            <div id="json-parse-msg" style="font-size:11px;margin-top:5px;min-height:14px"></div>
-          </div>
-          <div style="border-top:1px dashed #eee;margin:10px 0"></div>
-        </div>
-        <!-- manual fields -->
+    <div id="info-modal-body">
+      <div class="info-view active" id="info-view"></div>
+      <div class="info-edit" id="info-edit">
         <div class="notes-row"><span class="notes-row-label">營業時間</span><input class="notes-input" id="note-hours" placeholder="例：09:00–17:00，週一公休"/></div>
         <div class="notes-row"><span class="notes-row-label">門票費用</span><input class="notes-input" id="note-fee" placeholder="例：全票 200 元，學生 100 元"/></div>
         <div class="notes-row"><span class="notes-row-label">電話</span><input class="notes-input" id="note-phone" placeholder="例：02-2345-6789"/></div>
         <div class="notes-row"><span class="notes-row-label">官網</span><input class="notes-input" id="note-website" placeholder="例：https://www.example.com"/></div>
         <div style="margin-bottom:8px"><div class="notes-row-label" style="margin-bottom:4px;display:block">個人備註</div><textarea class="notes-field" id="note-memo" placeholder="行前提醒、停車資訊、推薦餐廳…"></textarea></div>
-        <button class="notes-save-btn" id="notes-save-btn"><i class="ti ti-device-floppy"></i> 儲存到景點</button>
+        <div class="info-action-row">
+          <button class="notes-save-btn" id="notes-save-btn" style="margin-top:0"><i class="ti ti-device-floppy"></i> 儲存到景點</button>
+          <button class="info-cancel-btn" id="notes-cancel-btn"><i class="ti ti-x"></i> 取消</button>
+        </div>
         <div class="notes-saved" id="notes-saved-msg"></div>
       </div>
     </div>
@@ -2040,6 +2022,13 @@ function describeRouteError(source,status,msg=''){
   }
   return msg||'路線服務暫時無法使用';
 }
+function describeFetchFailure(service,err){
+  const msg=err?.message||String(err||'');
+  if(/failed to fetch|load failed|networkerror/i.test(msg)){
+    return `無法連線到 ${service}（瀏覽器回報「${msg}」）。常見原因：網路不穩、DNS/防火牆/瀏覽器外掛阻擋、服務暫時不可用，或該服務未允許目前網頁跨站請求。`;
+  }
+  return `${service} 連線失敗：${msg}`;
+}
 function formatRouteWarning(warning){
   return warning?`<span class="seg-warning" title="${warning}">估算</span>`:'';
 }
@@ -2065,7 +2054,9 @@ async function fetchSegment(a,b,modeId){
       const suffix=isTransit?' (估算)':'';
       return{duration:fmtDur(dur)+suffix,distance:fmtDist(seg.distance),durationSec:dur,distanceM:seg.distance,coords,source:'ORS'};
     }catch(e){
-      apiWarning=e.message||describeRouteError('ORS');
+      apiWarning=/failed to fetch|load failed|networkerror/i.test(e?.message||'')
+        ? describeFetchFailure('ORS API',e)
+        : (e.message||describeFetchFailure('ORS API',e)||describeRouteError('ORS'));
     }
   }
 
@@ -2177,6 +2168,12 @@ function notesSummaryHtml(spot,{standalone=false}={}){
     <div class="info-note-card">${rows}</div>
   </div>`;
 }
+function emptyNotesHtml(){
+  return `<div class="info-section note-first">
+    <div class="info-label" style="color:var(--warning)"><i class="ti ti-pencil"></i> 我的筆記</div>
+    <div class="info-empty-note">尚未新增筆記。按「編輯筆記」手動填寫營業時間、門票、電話、官網或個人備註。</div>
+  </div>`;
+}
 function externalSpotLinksHtml(spot){
   const query=[spot.name,spot.addr].filter(Boolean).join(' ');
   const q=encodeURIComponent(query);
@@ -2187,37 +2184,44 @@ function externalSpotLinksHtml(spot){
     <a class="ext-btn gsearch" href="${gsearchUrl}" target="_blank"><i class="ti ti-search"></i> Google 搜尋</a>
   </div>`;
 }
-function renderSpotNotesInfo(spot){
+function renderSpotInfoView(spot){
+  const noteHtml=hasSpotNotes(spot)?notesSummaryHtml(spot,{standalone:true}):emptyNotesHtml();
   return `${externalSpotLinksHtml(spot)}
-    ${notesSummaryHtml(spot,{standalone:true})}
-    <div class="info-note">已優先顯示已儲存筆記，未查詢外部資料 · <span style="cursor:pointer;color:var(--primary-strong)" onclick="switchInfoTab('notes')">編輯筆記 →</span></div>`;
+    ${noteHtml}
+    <div class="info-action-row">
+      <button class="info-edit-btn" id="info-edit-note-btn" type="button"><i class="ti ti-pencil"></i> 編輯筆記</button>
+    </div>
+    <div class="info-note">不自動查詢外部景點資料；Google 按鈕可手動開啟導航或搜尋。</div>`;
 }
-function openInfoModal(spotId){
-  const spot=days.flatMap(d=>d.spots).find(s=>s.id===spotId);
-  if(!spot)return;
-  pendingInfoSpot=spot;
-  document.getElementById('info-modal-title').textContent=spot.name;
-  // reset to OSM tab
-  document.querySelectorAll('.im-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.im-pane').forEach(p=>p.classList.remove('active'));
-  document.querySelector('.im-tab[data-pane="osm"]').classList.add('active');
-  const infoPane=document.getElementById('im-pane-osm');
-  infoPane.classList.add('active');
-  // load notes fields
+function setInfoMode(mode){
+  document.getElementById('info-view').classList.toggle('active',mode==='view');
+  document.getElementById('info-edit').classList.toggle('active',mode==='edit');
+}
+function loadNoteInputs(spot){
   const n=spot.notes||{};
   document.getElementById('note-hours').value=n.hours||'';
   document.getElementById('note-fee').value=n.fee||'';
   document.getElementById('note-phone').value=n.phone||'';
   document.getElementById('note-website').value=n.website||'';
   document.getElementById('note-memo').value=n.memo||'';
+}
+function renderInfoView(){
+  if(!pendingInfoSpot)return;
+  const view=document.getElementById('info-view');
+  view.innerHTML=renderSpotInfoView(pendingInfoSpot);
+  const editBtn=document.getElementById('info-edit-note-btn');
+  if(editBtn)editBtn.onclick=()=>{loadNoteInputs(pendingInfoSpot);setInfoMode('edit');};
+  setInfoMode('view');
+}
+function openInfoModal(spotId){
+  const spot=days.flatMap(d=>d.spots).find(s=>s.id===spotId);
+  if(!spot)return;
+  pendingInfoSpot=spot;
+  document.getElementById('info-modal-title').textContent=spot.name;
+  loadNoteInputs(spot);
   document.getElementById('notes-saved-msg').textContent='';
   document.getElementById('info-modal').classList.add('open');
-  if(hasSpotNotes(spot)){
-    infoPane.innerHTML=renderSpotNotesInfo(spot);
-  }else{
-    infoPane.innerHTML='<div class="info-loading"><i class="ti ti-loader-2"></i> 查詢景點資訊中…</div>';
-    fetchSpotInfo(spot);
-  }
+  renderInfoView();
 }
 
 async function fetchSpotInfo(spot){
@@ -2264,8 +2268,7 @@ async function fetchSpotInfo(spot){
 }
 
 function switchInfoTab(pane){
-  document.querySelectorAll('.im-tab').forEach(t=>t.classList.toggle('active',t.dataset.pane===pane));
-  document.querySelectorAll('.im-pane').forEach(p=>p.classList.toggle('active',p.id==='im-pane-'+pane));
+  setInfoMode(pane==='notes'?'edit':'view');
 }
 
 function saveNotes(){
@@ -2279,8 +2282,8 @@ function saveNotes(){
   };
   saveLocal();
   renderSidebar();
-  const infoPane=document.getElementById('im-pane-osm');
-  if(hasSpotNotes(pendingInfoSpot))infoPane.innerHTML=renderSpotNotesInfo(pendingInfoSpot);
+  renderInfoView();
+  showToast('筆記已儲存');
   document.getElementById('notes-saved-msg').textContent='✓ 已儲存到景點';
   setTimeout(()=>{document.getElementById('notes-saved-msg').textContent='';},2000);
 }
@@ -2840,21 +2843,21 @@ document.getElementById('move-modal').onclick=e=>{if(e.target===document.getElem
 // info modal
 document.getElementById('info-modal-x').onclick=()=>document.getElementById('info-modal').classList.remove('open');
 document.getElementById('info-modal').onclick=e=>{if(e.target===document.getElementById('info-modal'))document.getElementById('info-modal').classList.remove('open');};
-document.querySelectorAll('.im-tab').forEach(t=>t.onclick=()=>switchInfoTab(t.dataset.pane));
 document.getElementById('notes-save-btn').onclick=saveNotes;
-document.getElementById('json-paste-btn').onclick=()=>{
+document.getElementById('notes-cancel-btn').onclick=()=>{loadNoteInputs(pendingInfoSpot);renderInfoView();};
+if(document.getElementById('json-paste-btn'))document.getElementById('json-paste-btn').onclick=()=>{
   const area=document.getElementById('json-paste-area');
   area.style.display=area.style.display==='none'?'block':'none';
   if(area.style.display==='block')document.getElementById('json-input').focus();
 };
-document.getElementById('json-parse-btn').onclick=parseJsonIntoNotes;
-document.getElementById('json-cancel-btn').onclick=()=>{
+if(document.getElementById('json-parse-btn'))document.getElementById('json-parse-btn').onclick=parseJsonIntoNotes;
+if(document.getElementById('json-cancel-btn'))document.getElementById('json-cancel-btn').onclick=()=>{
   document.getElementById('json-paste-area').style.display='none';
   document.getElementById('json-input').value='';
   document.getElementById('json-parse-msg').textContent='';
 };
 // support Cmd/Ctrl+Enter to parse
-document.getElementById('json-input').addEventListener('keydown',e=>{
+if(document.getElementById('json-input'))document.getElementById('json-input').addEventListener('keydown',e=>{
   if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();parseJsonIntoNotes();}
 });
 
