@@ -921,6 +921,8 @@ body.view-only .empty-day small{display:none}
 .trip-action-btn.danger{border-color:#F0CACA;background:#FFF5F5;color:var(--danger)}
 .trip-section-title{font-size:12px;font-weight:900;color:var(--text);margin:14px 0 8px;display:flex;align-items:center;gap:6px}
 .trip-url-box{border:1px solid var(--line-soft);border-radius:10px;background:#FAFBFA;padding:10px;margin-bottom:12px}
+.trip-help{font-size:11px;line-height:1.5;color:var(--muted);background:#FAFBFA;border:1px solid var(--line-soft);border-radius:10px;padding:9px 10px;margin:8px 0 12px}
+.trip-help b{color:var(--text)}
 .trip-url-row{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:7px;align-items:center;margin-bottom:7px}
 .trip-url-row:last-child{margin-bottom:0}
 .trip-url-label{font-size:11px;font-weight:900;color:var(--muted)}
@@ -1175,27 +1177,32 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         <button class="trip-action-btn" id="trip-save-btn"><i class="ti ti-device-floppy"></i> 儲存</button>
       </div>
       <div class="trip-url-box">
+        <div class="trip-help" style="margin-top:0">
+          <b>分享連結：</b>把下方連結傳給旅伴。編輯連結仍需要相同 Token 才能寫入；檢視連結只讀。
+        </div>
         <div class="trip-url-row">
           <div class="trip-url-label">編輯</div>
           <div class="trip-url-text" id="trip-edit-url"></div>
-          <button class="trip-action-btn secondary" id="copy-edit-url"><i class="ti ti-copy"></i> 複製</button>
+          <button class="trip-action-btn secondary" id="copy-edit-url"><i class="ti ti-copy"></i> 複製編輯</button>
         </div>
         <div class="trip-url-row">
           <div class="trip-url-label">檢視</div>
           <div class="trip-url-text" id="trip-view-url"></div>
-          <button class="trip-action-btn secondary" id="copy-view-url"><i class="ti ti-copy"></i> 複製</button>
+          <button class="trip-action-btn secondary" id="copy-view-url"><i class="ti ti-copy"></i> 複製檢視</button>
         </div>
       </div>
       <div class="trip-section-title" style="justify-content:space-between">
-        <span><i class="ti ti-list"></i> 已建立的旅程</span>
+        <span><i class="ti ti-list"></i> 本機已建立的旅程</span>
         <button class="trip-action-btn secondary" id="trip-new-btn"><i class="ti ti-plus"></i> 新增旅程</button>
       </div>
+      <div class="trip-help"><b>旅程清單：</b>「開啟」只是在這台裝置切換目前旅程；「檢視 / 編輯」會複製該旅程的分享連結。</div>
       <div class="trip-list" id="trip-list"></div>
       <div class="trip-section-title"><i class="ti ti-cloud"></i> Google JSON 簡易共編</div>
       <div class="trip-form-field">
         <label>Apps Script Web App URL</label>
         <input id="gas-url-input" placeholder="貼上部署後的 /exec 網址"/>
       </div>
+      <div class="trip-help">如果出現 Failed to fetch，通常是 Apps Script 跨網域限制或部署權限問題。新版會用備援送出並再讀回確認；大 JSON 會在 Sheet 分段儲存。</div>
       <div class="trip-form-grid">
         <div class="trip-form-field">
           <label>你的暱稱</label>
@@ -1704,9 +1711,9 @@ function renderTripModal(){
         <div class="trip-row-meta">${esc(trip.id)} · ${(trip.data?.days||[]).length||0} 天 · ${total} 個景點 · ${trip.updatedAt?new Date(trip.updatedAt).toLocaleString('zh-TW'):''}</div>
       </div>
       <div class="trip-row-actions">
-        <button class="trip-action-btn secondary" data-action="open"><i class="ti ti-folder-open"></i> 開啟</button>
-        <button class="trip-action-btn secondary" data-action="copy-view"><i class="ti ti-eye"></i> 檢視</button>
-        <button class="trip-action-btn secondary" data-action="copy-edit"><i class="ti ti-edit"></i> 編輯</button>
+        <button class="trip-action-btn secondary" data-action="open"><i class="ti ti-folder-open"></i> 本機開啟</button>
+        <button class="trip-action-btn secondary" data-action="copy-view"><i class="ti ti-eye"></i> 複製檢視</button>
+        <button class="trip-action-btn secondary" data-action="copy-edit"><i class="ti ti-edit"></i> 複製編輯</button>
         <button class="trip-action-btn danger" data-action="delete"><i class="ti ti-trash"></i></button>
       </div>`;
     row.querySelector('[data-action="open"]').onclick=()=>switchTrip(trip.id);
@@ -1851,6 +1858,38 @@ async function parseGasResponse(res){
   if(!res.ok||data.ok===false)throw new Error(data.error||`HTTP ${res.status}`);
   return data;
 }
+function gasJsonp(action,extra={}){
+  return new Promise((resolve,reject)=>{
+    if(!gasSyncConfig.url){reject(new Error('Missing Apps Script URL'));return;}
+    const cb='tpGasCb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>{
+      cleanup();
+      reject(new Error('Apps Script JSONP 逾時，請確認 /exec 網址與 Web App 權限。'));
+    },20000);
+    function cleanup(){
+      clearTimeout(timer);
+      delete window[cb];
+      script.remove();
+    }
+    window[cb]=(data)=>{
+      cleanup();
+      if(!data||data.ok===false)reject(new Error(data?.error||'Apps Script 回傳失敗'));
+      else resolve(data);
+    };
+    const url=new URL(gasSyncConfig.url);
+    url.searchParams.set('action',action);
+    url.searchParams.set('tripId',currentTripId);
+    url.searchParams.set('callback',cb);
+    Object.entries(extra).forEach(([k,v])=>url.searchParams.set(k,v));
+    script.onerror=()=>{
+      cleanup();
+      reject(new Error('無法載入 Apps Script。請確認部署網址是 /exec，且權限為知道連結的任何人。'));
+    };
+    script.src=url.toString();
+    document.head.appendChild(script);
+  });
+}
 function gasStateSignature(trip){
   try{return JSON.stringify({title:trip.title,data:trip.data,activityLog:trip.activityLog});}
   catch(e){return '';}
@@ -1864,7 +1903,12 @@ async function loadGasTrip({silent=false}={}){
   if(!gasSyncConfig.url)return setGasStatus('請先填入 Apps Script Web App URL。','err');
   try{
     if(!silent)setGasStatus('正在載入 Google JSON 雲端行程…','sync');
-    const data=await parseGasResponse(await fetch(buildGasEndpoint('load'),{method:'GET',cache:'no-store'}));
+    let data=null;
+    try{
+      data=await parseGasResponse(await fetch(buildGasEndpoint('load'),{method:'GET',cache:'no-store'}));
+    }catch(fetchErr){
+      data=await gasJsonp('load');
+    }
     const remote=data.trip;
     if(!remote){
       setGasStatus(canEdit()?'雲端尚未建立這個 tripId，按「儲存雲端」即可建立。':'雲端找不到這個旅程。',canEdit()?'sync':'err');
@@ -1899,13 +1943,27 @@ async function saveGasTrip({silent=false}={}){
     if(!silent)setGasStatus('正在儲存到 Google JSON 雲端…','sync');
     const payload=makeTripState();
     payload.updatedBy=gasSyncConfig.actor||'匿名旅伴';
+    const saveId='save_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    payload.clientSaveId=saveId;
     const body=new URLSearchParams();
     body.set('action','save');
     body.set('tripId',currentTripId);
     body.set('token',gasSyncConfig.token);
     body.set('actor',gasSyncConfig.actor||'匿名旅伴');
     body.set('payload',JSON.stringify(payload));
-    const data=await parseGasResponse(await fetch(gasSyncConfig.url,{method:'POST',body}));
+    let data=null;
+    try{
+      data=await parseGasResponse(await fetch(gasSyncConfig.url,{method:'POST',body}));
+    }catch(fetchErr){
+      if(!/failed to fetch|load failed|networkerror/i.test(fetchErr.message))throw fetchErr;
+      await fetch(gasSyncConfig.url,{method:'POST',body,mode:'no-cors'});
+      await new Promise(r=>setTimeout(r,1400));
+      const confirmed=await gasJsonp('load');
+      if(confirmed?.trip?.clientSaveId!==saveId){
+        throw new Error('已改用備援送出，但尚未讀到剛才的版本。可能是 Token 錯誤、Apps Script 權限未開，或資料仍在寫入中。請稍後按「載入雲端」確認。');
+      }
+      data={updatedAt:confirmed.trip.updatedAt,updatedBy:confirmed.trip.updatedBy};
+    }
     gasLastRemoteUpdatedAt=data.updatedAt||payload.updatedAt;
     gasLastLocalSignature=gasStateSignature(payload);
     updateGasStatus();
