@@ -843,6 +843,7 @@ body.view-only .empty-day small{display:none}
 .spot-btn.move:hover{color:var(--primary-strong);background:var(--primary-soft)}
 .spot-btn.copy:hover{color:#185FA5;background:#E6F1FB}
 .spot-btn.info-btn:hover{color:#BA7517;background:#FAEEDA}
+.spot-more-btn{display:none}
 /* segment connector */
 .seg-connector{display:flex;align-items:stretch;padding:2px 0 4px}
 .seg-timeline{display:flex;flex-direction:column;align-items:center;width:26px;flex-shrink:0}
@@ -1124,7 +1125,8 @@ body.mobile-ui #mobile-sheet{position:absolute;left:0;right:0;bottom:0;z-index:1
 #mobile-spot-list .spot-timeline,#mobile-spot-list .seg-timeline{width:38px}
 #mobile-spot-list .spot-dot{width:30px;height:30px;font-size:15px}
 #mobile-spot-list .spot-vline,#mobile-spot-list .seg-vline{background:#B7D7C0;min-height:18px}
-#mobile-spot-list .spot-item{min-height:62px;padding:11px 0;border:none;border-radius:0;cursor:pointer;align-items:flex-start;background:transparent}
+#mobile-spot-list .spot-item{min-height:62px;padding:11px 0;border:none;border-radius:0;cursor:default;align-items:flex-start;background:transparent;flex-wrap:wrap}
+#mobile-spot-list .spot-info{flex:1 1 calc(100% - 44px)}
 #mobile-spot-list .spot-item:hover{border-color:transparent}
 #mobile-spot-list .spot-name{font-size:18px;font-weight:800;color:var(--text)}
 #mobile-spot-list .spot-meta{font-size:13px;color:var(--muted);margin-top:5px}
@@ -1134,13 +1136,24 @@ body.mobile-ui #mobile-sheet{position:absolute;left:0;right:0;bottom:0;z-index:1
 #mobile-spot-list .time-chip input[type="number"]{width:48px}
 #mobile-spot-list .time-select{height:30px;min-width:72px;font-size:16px;border-radius:9px}
 #mobile-spot-list .spot-btn{width:36px;height:36px;font-size:18px;color:var(--muted)}
-#mobile-spot-list .spot-actions{gap:1px;max-width:none;flex-wrap:nowrap}
+#mobile-spot-list .spot-more-btn{display:inline-flex;width:34px;height:34px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--muted);align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;margin-top:28px}
+#mobile-spot-list .spot-more-btn.active{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
+#mobile-spot-list .spot-actions{gap:1px;max-width:none;flex:1 0 100%;flex-wrap:nowrap;justify-content:flex-start;background:#F7F8F9;border-radius:12px;padding:6px;margin-top:8px}
+#mobile-spot-list .spot-item:hover .spot-actions,
+#mobile-spot-list .spot-item:hover .timeline-edit-btn{display:none}
+#mobile-spot-list .spot-item.tools-open .spot-actions{display:flex}
+#mobile-spot-list .spot-item.tools-open .timeline-edit-btn,
+#mobile-spot-list .timeline-box.editor-open .timeline-edit-btn{display:inline-flex}
 #mobile-spot-list .spot-note-dot{width:8px;height:8px;margin-top:14px;background:#D67B00}
 #mobile-spot-list .seg-connector{padding:0 0 3px}
 #mobile-spot-list .seg-body{padding:3px 0;gap:5px 8px}
-#mobile-spot-list .seg-connector:hover .seg-body,
+#mobile-spot-list .seg-connector:hover .seg-body{grid-template-areas:"main result";padding:3px 0;background:transparent}
+#mobile-spot-list .seg-connector:hover .seg-actions{display:none}
+#mobile-spot-list .seg-connector:not(.tools-open):not(.seg-expanded) .seg-mode-btn:not(.active){display:none!important}
 #mobile-spot-list .seg-connector.tools-open .seg-body,
 #mobile-spot-list .seg-connector.seg-expanded .seg-body{padding:8px 10px}
+#mobile-spot-list .seg-connector.tools-open .seg-actions,
+#mobile-spot-list .seg-connector.seg-expanded .seg-actions{display:flex}
 #mobile-spot-list .seg-mode-btns{background:var(--surface-soft);border-radius:10px;padding:4px;gap:2px}
 #mobile-spot-list .seg-mode-btn{width:34px;height:32px;border:none;border-radius:8px;font-size:17px;background:transparent}
 #mobile-spot-list .seg-mode-btn.active{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)}
@@ -2702,6 +2715,7 @@ function renderSegmentConnector(spot,i){
   });
   conn.onclick=e=>{
     if(e.target.closest('button,input,a'))return;
+    activeSpotToolsId=null;
     activeSegmentToolsId=activeSegmentToolsId===spot.id?null:spot.id;
     renderSidebar();
   };
@@ -2851,6 +2865,7 @@ function renderMobileSpotList(){
             ${timelineHtml(spot,i,spots)}
           </div>
           ${spot.notes&&Object.values(spot.notes).some(v=>v)?'<div class="spot-note-dot" title="有個人筆記"></div>':''}
+          ${canEdit()?`<button class="spot-more-btn${toolsOpen?' active':''}" type="button" title="${toolsOpen?'收合操作':'更多操作'}" aria-label="${toolsOpen?'收合操作':'更多操作'}"><i class="ti ti-dots"></i></button>`:''}
           <div class="spot-actions">
             <button class="spot-btn info-btn" title="查詢景點資訊"><i class="ti ti-info-circle"></i></button>
             <button class="spot-btn copy" title="複製景點"><i class="ti ti-copy"></i></button>
@@ -2863,9 +2878,13 @@ function renderMobileSpotList(){
     si.onclick=e=>{
       if(e.target.closest('button')||e.target.closest('.timeline-box'))return;
       if(!canEdit()){openInfoModal(spot.id);return;}
+    };
+    card.querySelector('.spot-more-btn')?.addEventListener('click',e=>{
+      e.stopPropagation();
+      activeSegmentToolsId=null;
       activeSpotToolsId=activeSpotToolsId===spot.id?null:spot.id;
       renderSidebar();
-    };
+    });
     if(canEdit()){
       card.querySelector('.spot-btn.del').onclick=e=>{e.stopPropagation();removeSpot(i);};
       card.querySelector('.spot-btn.copy').onclick=e=>{e.stopPropagation();duplicateSpot(i);};
@@ -4213,6 +4232,13 @@ document.addEventListener('click',e=>{
   if(!document.getElementById('search-bar').contains(e.target))document.getElementById('search-results').style.display='none';
   if(!e.target.closest('.mobile-search-wrap'))document.getElementById('mobile-search-results').style.display='none';
   if(!e.target.closest('#mobile-actions-wrap'))document.getElementById('mobile-actions-menu').classList.remove('open');
+  if(document.body.classList.contains('mobile-ui')&&!e.target.closest('#mobile-spot-list .spot-item')&&!e.target.closest('#mobile-spot-list .seg-connector')){
+    if(activeSpotToolsId||activeSegmentToolsId){
+      activeSpotToolsId=null;
+      activeSegmentToolsId=null;
+      renderSidebar();
+    }
+  }
 });
 // map
 document.getElementById('fit-btn').onclick=fitBounds;
