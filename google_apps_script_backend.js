@@ -1,35 +1,34 @@
 /**
- * Travel Planner Google JSON sync backend.
+ * Travel Planner Google Drive JSON sync backend.
  *
  * Setup:
- * 1. Create a Google Sheet.
- * 2. Extensions -> Apps Script.
- * 3. Paste this file.
- * 4. Deploy -> New deployment -> Web app.
- * 5. Execute as: Me. Who has access: Anyone with the link.
- * 6. Copy the /exec URL into the travel planner.
+ * 1. Go to https://script.google.com and create a new Apps Script project.
+ * 2. Paste this file.
+ * 3. Deploy -> New deployment -> Web app.
+ * 4. Execute as: Me. Who has access: Anyone with the link.
+ * 5. Copy the /exec URL into the travel planner.
  *
- * Data model:
- * - Trips: metadata, token, log.
- * - TripChunks: large JSON split into 45k-character chunks.
+ * Storage:
+ * - GitHub Pages stores only the app code.
+ * - This script stores each trip as one JSON file in Google Drive:
+ *   Travel Planner Cloud/trip-planner_<tripId>.json
  */
 
-const SHEET_NAME = 'Trips';
-const CHUNK_SHEET_NAME = 'TripChunks';
-const CHUNK_SIZE = 45000;
-const HEADERS = ['tripId', 'title', 'jsonRef', 'updatedAt', 'updatedBy', 'editToken', 'logJson'];
-const CHUNK_HEADERS = ['tripId', 'seq', 'chunk'];
+const DRIVE_FOLDER_NAME = 'Travel Planner Cloud';
+const FILE_PREFIX = 'trip-planner_';
+const FILE_SUFFIX = '.json';
 
 function doGet(e) {
   const callback = String(e.parameter.callback || '').trim();
   try {
     const action = String(e.parameter.action || 'load');
-    if (action === 'ping') return json_({ ok: true, now: new Date().toISOString() }, callback);
+    if (action === 'ping') return json_({ ok: true, now: new Date().toISOString(), storage: 'google-drive-json' }, callback);
     if (action === 'list') return json_({ ok: true, trips: listTrips_() }, callback);
     if (action === 'load') {
       const tripId = cleanTripId_(e.parameter.tripId);
       if (!tripId) return json_({ ok: false, error: 'Missing tripId' }, callback);
-      return json_({ ok: true, trip: readTrip_(tripId) }, callback);
+      const doc = readTripDoc_(tripId);
+      return json_({ ok: true, trip: doc ? doc.trip : null, meta: doc ? publicMeta_(doc) : null }, callback);
     }
     return json_({ ok: false, error: `Unknown action: ${action}` }, callback);
   } catch (err) {
@@ -50,18 +49,41 @@ function doPost(e) {
     if (!tripId) return json_({ ok: false, error: 'Missing tripId' });
     if (!token) return json_({ ok: false, error: 'Missing edit token' });
     if (!payloadText) return json_({ ok: false, error: 'Missing payload' });
-    const payload = JSON.parse(payloadText);
-    payload.id = tripId;
-    payload.updatedAt = new Date().toISOString();
-    payload.updatedBy = actor;
-    const saved = saveTrip_(tripId, payload, token, actor);
+
+    const trip = JSON.parse(payloadText);
+    trip.id = tripId;
+    trip.updatedAt = new Date().toISOString();
+    trip.updatedBy = actor;
+
+    const existing = readTripDoc_(tripId);
+    if (existing && String(existing.editToken || '') !== token) {
+      throw new Error('Edit token does not match this trip');
+    }
+
+    const log = Array.isArray(existing && existing.log) ? existing.log.slice(0, 99) : [];
+    log.unshift({ time: trip.updatedAt, actor, action: existing ? 'save' : 'create' });
+    const doc = {
+      _app: 'travel-planner-cloud',
+      _schema: 2,
+      storage: 'google-drive-json',
+      tripId,
+      title: trip.title || tripId,
+      updatedAt: trip.updatedAt,
+      updatedBy: actor,
+      editToken: token,
+      log,
+      trip
+    };
+
+    const file = writeTripDoc_(tripId, doc);
     return json_({
       ok: true,
       tripId,
-      updatedAt: saved.updatedAt,
+      updatedAt: doc.updatedAt,
       updatedBy: actor,
-      chunks: saved.chunks,
-      bytes: payloadText.length
+      fileId: file.getId(),
+      fileName: file.getName(),
+      bytes: JSON.stringify(doc).length
     });
   } catch (err) {
     return json_({ ok: false, error: err.message || String(err) });
@@ -71,135 +93,75 @@ function doPost(e) {
 }
 
 function listTrips_() {
-  const sheet = getSheet_();
-  const values = sheet.getDataRange().getValues();
-  return values.slice(1).filter(row => row[0]).map(row => ({
-    tripId: row[0],
-    title: row[1] || row[0],
-    updatedAt: row[3] || '',
-    updatedBy: row[4] || ''
-  })).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
-}
-
-function readTrip_(tripId) {
-  const sheet = getSheet_();
-  const rowIndex = findTripRow_(sheet, tripId);
-  if (!rowIndex) return null;
-  const row = sheet.getRange(rowIndex, 1, 1, HEADERS.length).getValues()[0];
-  const jsonRef = String(row[2] || '');
-  let payloadText = '';
-  if (jsonRef.indexOf('__chunked__:') === 0) {
-    payloadText = readChunks_(tripId);
-  } else {
-    payloadText = jsonRef;
+  const folder = getFolder_();
+  const files = folder.getFiles();
+  const trips = [];
+  while (files.hasNext()) {
+    const file = files.next();
+    if (!file.getName().startsWith(FILE_PREFIX) || !file.getName().endsWith(FILE_SUFFIX)) continue;
+    try {
+      const doc = JSON.parse(file.getBlob().getDataAsString('UTF-8'));
+      trips.push(publicMeta_(doc, file));
+    } catch (err) {
+      trips.push({
+        tripId: file.getName(),
+        title: file.getName(),
+        updatedAt: file.getLastUpdated().toISOString(),
+        updatedBy: '',
+        fileId: file.getId(),
+        parseError: err.message || String(err)
+      });
+    }
   }
-  if (!payloadText) return null;
-  const payload = JSON.parse(payloadText);
-  payload.id = tripId;
-  payload.title = payload.title || row[1] || tripId;
-  payload.updatedAt = payload.updatedAt || row[3] || '';
-  payload.updatedBy = payload.updatedBy || row[4] || '';
-  return payload;
+  return trips.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
 }
 
-function saveTrip_(tripId, payload, token, actor) {
-  const sheet = getSheet_();
-  let rowIndex = findTripRow_(sheet, tripId);
-  const now = payload.updatedAt || new Date().toISOString();
-  const title = payload.title || tripId;
-  const payloadText = JSON.stringify(payload);
-  if (!rowIndex) {
-    const log = [{ time: now, actor, action: 'create' }];
-    rowIndex = sheet.getLastRow() + 1;
-    sheet.getRange(rowIndex, 1, 1, HEADERS.length).setValues([[
-      tripId, title, '', now, actor, token, JSON.stringify(log)
-    ]]);
-  } else {
-    const tokenCell = sheet.getRange(rowIndex, 6).getValue();
-    if (String(tokenCell || '') !== token) throw new Error('Edit token does not match this trip');
+function readTripDoc_(tripId) {
+  const file = findTripFile_(tripId);
+  if (!file) return null;
+  const text = file.getBlob().getDataAsString('UTF-8');
+  if (!text) return null;
+  return JSON.parse(text);
+}
+
+function writeTripDoc_(tripId, doc) {
+  const folder = getFolder_();
+  const text = JSON.stringify(doc);
+  const fileName = fileNameForTrip_(tripId);
+  let file = findTripFile_(tripId);
+  if (file) {
+    file.setContent(text);
+    file.setName(fileName);
+    return file;
   }
-  const oldLogText = sheet.getRange(rowIndex, 7).getValue();
-  let log = [];
-  try { log = JSON.parse(oldLogText || '[]'); } catch (err) { log = []; }
-  log.unshift({ time: now, actor, action: 'save' });
-  log = log.slice(0, 100);
-  const chunks = writeChunks_(tripId, payloadText);
-  sheet.getRange(rowIndex, 1, 1, HEADERS.length).setValues([[
-    tripId,
-    title,
-    `__chunked__:${chunks}:${payloadText.length}`,
-    now,
-    actor,
-    token,
-    JSON.stringify(log)
-  ]]);
-  return { updatedAt: now, chunks };
+  return folder.createFile(fileName, text, MimeType.PLAIN_TEXT);
 }
 
-function writeChunks_(tripId, text) {
-  const sheet = getChunkSheet_();
-  deleteChunks_(sheet, tripId);
-  const rows = [];
-  for (let start = 0, seq = 0; start < text.length; start += CHUNK_SIZE, seq++) {
-    rows.push([tripId, seq, text.slice(start, start + CHUNK_SIZE)]);
-  }
-  if (rows.length) {
-    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, CHUNK_HEADERS.length).setValues(rows);
-  }
-  return rows.length;
+function findTripFile_(tripId) {
+  const folder = getFolder_();
+  const files = folder.getFilesByName(fileNameForTrip_(tripId));
+  return files.hasNext() ? files.next() : null;
 }
 
-function readChunks_(tripId) {
-  const sheet = getChunkSheet_();
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return '';
-  const values = sheet.getRange(2, 1, lastRow - 1, CHUNK_HEADERS.length).getValues();
-  return values
-    .filter(row => String(row[0]) === tripId)
-    .sort((a, b) => Number(a[1]) - Number(b[1]))
-    .map(row => String(row[2] || ''))
-    .join('');
+function getFolder_() {
+  const folders = DriveApp.getFoldersByName(DRIVE_FOLDER_NAME);
+  return folders.hasNext() ? folders.next() : DriveApp.createFolder(DRIVE_FOLDER_NAME);
 }
 
-function deleteChunks_(sheet, tripId) {
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return;
-  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
-  for (let i = ids.length - 1; i >= 0; i--) {
-    if (String(ids[i]) === tripId) sheet.deleteRow(i + 2);
-  }
+function fileNameForTrip_(tripId) {
+  return `${FILE_PREFIX}${tripId}${FILE_SUFFIX}`;
 }
 
-function getSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) sheet = ss.insertSheet(SHEET_NAME);
-  ensureHeaders_(sheet, HEADERS);
-  return sheet;
-}
-
-function getChunkSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(CHUNK_SHEET_NAME);
-  if (!sheet) sheet = ss.insertSheet(CHUNK_SHEET_NAME);
-  ensureHeaders_(sheet, CHUNK_HEADERS);
-  return sheet;
-}
-
-function ensureHeaders_(sheet, headers) {
-  const existing = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
-  if (existing.join('') !== headers.join('')) {
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    sheet.setFrozenRows(1);
-  }
-}
-
-function findTripRow_(sheet, tripId) {
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return 0;
-  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
-  const idx = ids.findIndex(id => String(id) === tripId);
-  return idx === -1 ? 0 : idx + 2;
+function publicMeta_(doc, file) {
+  return {
+    tripId: doc.tripId || doc.trip && doc.trip.id || '',
+    title: doc.title || doc.trip && doc.trip.title || '',
+    updatedAt: doc.updatedAt || doc.trip && doc.trip.updatedAt || '',
+    updatedBy: doc.updatedBy || doc.trip && doc.trip.updatedBy || '',
+    storage: doc.storage || 'google-drive-json',
+    fileId: file ? file.getId() : undefined,
+    fileName: file ? file.getName() : undefined
+  };
 }
 
 function cleanTripId_(value) {

@@ -1192,17 +1192,17 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         </div>
       </div>
       <div class="trip-section-title" style="justify-content:space-between">
-        <span><i class="ti ti-list"></i> 本機已建立的旅程</span>
+        <span><i class="ti ti-device-desktop"></i> 本機旅程（只在這台裝置）</span>
         <button class="trip-action-btn secondary" id="trip-new-btn"><i class="ti ti-plus"></i> 新增旅程</button>
       </div>
-      <div class="trip-help"><b>旅程清單：</b>「開啟」只是在這台裝置切換目前旅程；「檢視 / 編輯」會複製該旅程的分享連結。</div>
+      <div class="trip-help"><b>本機旅程：</b>只存在這台電腦 / 手機的瀏覽器。按「本機開啟」只是切換目前畫面，不會自動上傳。要給別人共編，請到下方「Google Drive JSON 共編」按「儲存雲端」。</div>
       <div class="trip-list" id="trip-list"></div>
-      <div class="trip-section-title"><i class="ti ti-cloud"></i> Google JSON 簡易共編</div>
+      <div class="trip-section-title"><i class="ti ti-cloud"></i> Google Drive JSON 共編</div>
       <div class="trip-form-field">
         <label>Apps Script Web App URL</label>
         <input id="gas-url-input" placeholder="貼上部署後的 /exec 網址"/>
       </div>
-      <div class="trip-help">如果出現 Failed to fetch，通常是 Apps Script 跨網域限制或部署權限問題。新版會用備援送出並再讀回確認；大 JSON 會在 Sheet 分段儲存。</div>
+      <div class="trip-help"><b>雲端旅程：</b>會透過 Apps Script 存成 Google Drive 裡的單一 JSON 檔。GitHub 只放 APP，Drive JSON 才是共編資料。若出現 Failed to fetch，通常是 Apps Script 部署權限或尚未更新後端程式。</div>
       <div class="trip-form-grid">
         <div class="trip-form-field">
           <label>你的暱稱</label>
@@ -1637,7 +1637,7 @@ function updateAccessUI(){
   }
   if(lbl)lbl.textContent=canEdit()?'可編輯':'純檢視';
   const tripLbl=document.getElementById('trip-id-label');
-  if(tripLbl)tripLbl.textContent=`${gasSyncEnabled?'Google JSON':cloudEnabled?'雲端':'本機'}：${currentTripId}`;
+  if(tripLbl)tripLbl.textContent=`${gasSyncEnabled?'Google Drive JSON':cloudEnabled?'雲端':'本機'}：${currentTripId}`;
 }
 function toggleAccessMode(){
   const next=canEdit()?'view':'edit';
@@ -1847,7 +1847,7 @@ function updateGasStatus(){
   }
   const who=gasSyncConfig.actor||'匿名旅伴';
   const last=gasLastRemoteUpdatedAt?`，遠端更新：${new Date(gasLastRemoteUpdatedAt).toLocaleString('zh-TW')}`:'';
-  setGasStatus(`Google JSON 同步中：${currentTripId}（${who}）${last}`,'ok');
+  setGasStatus(`Google Drive JSON 同步中：${currentTripId}（${who}）${last}`,'ok');
 }
 function buildGasEndpoint(action){
   const url=new URL(gasSyncConfig.url);
@@ -1907,7 +1907,7 @@ function scheduleGasSave(){
 async function loadGasTrip({silent=false}={}){
   if(!gasSyncConfig.url)return setGasStatus('請先填入 Apps Script Web App URL。','err');
   try{
-    if(!silent)setGasStatus('正在載入 Google JSON 雲端行程…','sync');
+    if(!silent)setGasStatus('正在載入 Google Drive JSON 雲端行程…','sync');
     let data=null;
     try{
       data=await parseGasResponse(await fetch(buildGasEndpoint('load'),{method:'GET',cache:'no-store'}));
@@ -1945,7 +1945,7 @@ async function saveGasTrip({silent=false}={}){
   if(!canEdit())return setGasStatus('目前是純檢視模式，不能寫入雲端。','err');
   if(!gasSyncConfig.token)return setGasStatus('請設定編輯 Token，兩位共編者使用同一組即可。','err');
   try{
-    if(!silent)setGasStatus('正在儲存到 Google JSON 雲端…','sync');
+    if(!silent)setGasStatus('正在儲存到 Google Drive JSON 雲端…','sync');
     const payload=makeTripState();
     payload.updatedBy=gasSyncConfig.actor||'匿名旅伴';
     const saveId='save_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
