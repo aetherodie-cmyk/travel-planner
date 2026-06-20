@@ -723,6 +723,7 @@ body.view-only #api-key-btn,
 body.view-only #mobile-load-json,
 body.view-only #mobile-api-key,
 body.view-only .spot-btn.move,
+body.view-only .spot-btn.copy,
 body.view-only .spot-btn.del,
 body.view-only .timeline-edit-btn,
 body.view-only .seg-actions,
@@ -830,6 +831,7 @@ body.view-only .empty-day small{display:none}
 .spot-btn:hover{background:var(--surface-soft);color:var(--text)}
 .spot-btn.del:hover{color:var(--danger);background:#fdf0f0}
 .spot-btn.move:hover{color:var(--primary-strong);background:var(--primary-soft)}
+.spot-btn.copy:hover{color:#185FA5;background:#E6F1FB}
 .spot-btn.info-btn:hover{color:#BA7517;background:#FAEEDA}
 /* segment connector */
 .seg-connector{display:flex;align-items:stretch;padding:4px 0 8px}
@@ -1017,6 +1019,9 @@ body.view-only .empty-day small{display:none}
 .spot-json-msg{font-size:11px;min-height:16px;margin-top:6px;line-height:1.4}
 .notes-save-btn{width:100%;padding:8px;border:1px solid #378ADD;border-radius:8px;background:#E6F1FB;cursor:pointer;font-size:13px;font-weight:500;color:#185FA5;margin-top:12px}
 .notes-save-btn:hover{background:#d0e8f8}
+.note-action-row{position:sticky;bottom:0;background:#fff;padding:12px 0 4px;margin-top:12px;z-index:3}
+.note-action-row .notes-save-btn{flex:1;height:42px;margin:0;font-weight:800}
+.note-action-row .info-cancel-btn{height:42px;flex:0 0 84px}
 .notes-saved{font-size:11px;color:#0F6E56;text-align:center;margin-top:6px;min-height:16px}
 /* spot notes indicator */
 .spot-note-dot{width:6px;height:6px;border-radius:50%;background:#BA7517;flex-shrink:0;margin-top:6px}
@@ -1341,6 +1346,19 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
   </div>
 </div>
 
+<!-- CLOUD CONFLICT MODAL -->
+<div class="overlay" id="cloud-conflict-modal">
+  <div class="modal-box">
+    <div class="modal-hd"><h2><i class="ti ti-alert-triangle"></i> 雲端版本衝突</h2><button class="modal-x" id="cloud-conflict-modal-x">×</button></div>
+    <div class="trip-help" id="cloud-conflict-msg" style="margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="trip-action-btn" id="conflict-load-cloud"><i class="ti ti-download"></i> 載入雲端最新版</button>
+      <button class="trip-action-btn secondary" id="conflict-open-draft"><i class="ti ti-folder-open"></i> 開啟本機草稿</button>
+      <button class="trip-action-btn danger" id="conflict-force-save"><i class="ti ti-cloud-upload"></i> 強制覆蓋雲端</button>
+    </div>
+  </div>
+</div>
+
 <!-- INFO MODAL -->
 <div class="overlay" id="info-modal">
   <div class="modal-box">
@@ -1380,7 +1398,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         <div class="spot-form-grid full">
           <div class="spot-form-field"><label>個人備註</label><textarea id="note-memo" placeholder="行前提醒、停車資訊、推薦餐廳…"></textarea></div>
         </div>
-        <div class="info-action-row">
+        <div class="info-action-row note-action-row">
           <button class="notes-save-btn" id="notes-save-btn" style="margin-top:0"><i class="ti ti-device-floppy"></i> 儲存到景點</button>
           <button class="info-cancel-btn" id="notes-cancel-btn"><i class="ti ti-x"></i> 取消</button>
         </div>
@@ -1537,6 +1555,7 @@ let gasApplying=false;
 let gasLastRemoteUpdatedAt='';
 let gasLastRemoteRevision='';
 let gasLastLocalSignature='';
+let gasPendingConflict=null;
 function canEdit(){return accessMode==='edit';}
 function requireEdit(action='修改行程'){
   if(canEdit())return true;
@@ -1561,6 +1580,10 @@ function makeTripState(){
     data:{days,activeDay,orsApiKey,useApiKey},
     activityLog
   };
+}
+function stateSignature(state){
+  try{return JSON.stringify({title:state.title,data:state.data,activityLog:state.activityLog});}
+  catch(e){return '';}
 }
 function readTripStore(){
   try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{"_version":3,"trips":{}}');}
@@ -1920,8 +1943,46 @@ function gasJsonp(action,extra={}){
   });
 }
 function gasStateSignature(trip){
-  try{return JSON.stringify({title:trip.title,data:trip.data,activityLog:trip.activityLog});}
-  catch(e){return '';}
+  return stateSignature(trip);
+}
+function createConflictDraft(){
+  const current=makeTripState();
+  const sig=stateSignature(current);
+  if(gasPendingConflict?.draftId&&gasPendingConflict.signature===sig){
+    const store=readTripStore();
+    if(store.trips?.[gasPendingConflict.draftId])return gasPendingConflict.draftId;
+  }
+  const stamp=new Date().toISOString().replace(/[-:T]/g,'').slice(0,12);
+  const draftId=sanitizeTripId(`${currentTripId}-conflict-${stamp}`);
+  const draft={
+    ...current,
+    id:draftId,
+    title:`衝突草稿：${currentTripTitle}`,
+    updatedAt:new Date().toISOString(),
+    conflictOf:currentTripId
+  };
+  draft.activityLog=[
+    {
+      id:'log_'+Date.now()+'_conflict',
+      time:new Date().toISOString(),
+      actor:gasSyncConfig.actor||'本機使用者',
+      action:'create_conflict_draft',
+      detail:{sourceTripId:currentTripId}
+    },
+    ...(Array.isArray(current.activityLog)?current.activityLog:[])
+  ].slice(0,100);
+  const store=readTripStore();
+  store.trips=store.trips||{};
+  store.trips[draftId]=draft;
+  writeTripStore(store);
+  gasPendingConflict={draftId,signature:sig};
+  renderTripModal();
+  return draftId;
+}
+function openCloudConflictModal(draftId){
+  const msg=document.getElementById('cloud-conflict-msg');
+  if(msg)msg.innerHTML=`雲端已有其他裝置更新，這次沒有覆蓋。已先把你目前這台裝置的修改保留為本機草稿：<b>${esc(draftId)}</b>。你可以先載入雲端最新版，或明確強制覆蓋雲端。`;
+  document.getElementById('cloud-conflict-modal').classList.add('open');
 }
 function scheduleGasSave(){
   if(!gasSyncEnabled||gasApplying||!canEdit())return;
@@ -1969,7 +2030,7 @@ async function loadGasTrip({silent=false}={}){
     return null;
   }
 }
-async function saveGasTrip({silent=false}={}){
+async function saveGasTrip({silent=false,force=false}={}){
   if(!gasSyncConfig.url)return setGasStatus('請先填入 Apps Script Web App URL。','err');
   if(!canEdit())return setGasStatus('目前是純檢視模式，不能寫入雲端。','err');
   if(!gasSyncConfig.token)return setGasStatus('請設定編輯 Token，兩位共編者使用同一組即可。','err');
@@ -1985,6 +2046,7 @@ async function saveGasTrip({silent=false}={}){
     body.set('token',gasSyncConfig.token);
     body.set('actor',gasSyncConfig.actor||'匿名旅伴');
     body.set('baseRevision',gasLastRemoteRevision||'');
+    if(force)body.set('force','1');
     body.set('payload',JSON.stringify(payload));
     let data=null;
     try{
@@ -2002,13 +2064,16 @@ async function saveGasTrip({silent=false}={}){
     gasLastRemoteUpdatedAt=data.updatedAt||payload.updatedAt;
     gasLastRemoteRevision=data.revision||data.updatedAt||payload.updatedAt;
     gasLastLocalSignature=gasStateSignature(payload);
+    gasPendingConflict=null;
     updateGasStatus();
     if(!silent)showToast('已儲存到雲端');
     return data;
   }catch(e){
     let msg=/failed to fetch/i.test(e.message)?'無法連線 Apps Script。請確認使用 /exec 部署網址，且 Web App 權限設為「知道連結的任何人」。':e.message;
     if(/Cloud version changed|has not loaded/i.test(msg)){
-      msg='雲端已有其他裝置更新，為避免覆蓋，這次沒有儲存。請先按「從雲端載入」確認最新版，再重新修改。';
+      const draftId=createConflictDraft();
+      openCloudConflictModal(draftId);
+      msg=`雲端已有其他裝置更新，為避免覆蓋，這次沒有儲存。已保留本機草稿：${draftId}`;
     }
     setGasStatus(`儲存失敗：${msg}`,'err');
     return null;
@@ -2690,6 +2755,7 @@ function renderSpotList(){
           ${spot.notes&&Object.values(spot.notes).some(v=>v)?'<div class="spot-note-dot" title="有個人筆記"></div>':''}
           <div class="spot-actions">
             <button class="spot-btn info-btn" title="查詢景點資訊"><i class="ti ti-info-circle"></i></button>
+            <button class="spot-btn copy" title="複製景點"><i class="ti ti-copy"></i></button>
             <button class="spot-btn move" title="移到其他天"><i class="ti ti-arrows-move"></i></button>
             <button class="spot-btn del" title="移除"><i class="ti ti-trash"></i></button>
           </div>
@@ -2703,6 +2769,7 @@ function renderSpotList(){
       si.addEventListener('dragleave',()=>si.classList.remove('drag-over'));
       si.addEventListener('drop',e=>{e.preventDefault();si.classList.remove('drag-over');if(dragSrc!==null&&dragSrc!==i){reorderSpot(dragSrc,i);}dragSrc=null;});
       card.querySelector('.spot-btn.del').onclick=()=>removeSpot(i);
+      card.querySelector('.spot-btn.copy').onclick=()=>duplicateSpot(i);
       card.querySelector('.spot-btn.move').onclick=()=>openMoveModal(i);
     }
     card.querySelector('.spot-btn.info-btn').onclick=()=>openInfoModal(spot.id);
@@ -2752,6 +2819,7 @@ function renderMobileSpotList(){
           ${spot.notes&&Object.values(spot.notes).some(v=>v)?'<div class="spot-note-dot" title="有個人筆記"></div>':''}
           <div class="spot-actions">
             <button class="spot-btn info-btn" title="查詢景點資訊"><i class="ti ti-info-circle"></i></button>
+            <button class="spot-btn copy" title="複製景點"><i class="ti ti-copy"></i></button>
             <button class="spot-btn move" title="移到其他天"><i class="ti ti-arrows-move"></i></button>
             <button class="spot-btn del" title="移除"><i class="ti ti-trash"></i></button>
           </div>
@@ -2761,6 +2829,7 @@ function renderMobileSpotList(){
     si.onclick=e=>{if(!e.target.closest('button')&&!e.target.closest('.timeline-box'))openInfoModal(spot.id);};
     if(canEdit()){
       card.querySelector('.spot-btn.del').onclick=e=>{e.stopPropagation();removeSpot(i);};
+      card.querySelector('.spot-btn.copy').onclick=e=>{e.stopPropagation();duplicateSpot(i);};
       card.querySelector('.spot-btn.move').onclick=e=>{e.stopPropagation();openMoveModal(i);};
     }
     card.querySelector('.spot-btn.info-btn').onclick=e=>{e.stopPropagation();openInfoModal(spot.id);};
@@ -2942,6 +3011,21 @@ function reorderSpot(from,to){
   recordActivity('reorder_spot',{day:days[activeDay]?.name,spot:item?.name,from,to});
   saveLocal();
   renderSidebar();renderMarkers();clearRouteLayers();
+}
+function duplicateSpot(idx){
+  if(!requireEdit('複製景點'))return;
+  const arr=days[activeDay].spots;
+  const source=arr[idx];
+  if(!source)return;
+  const copy=JSON.parse(JSON.stringify(source));
+  copy.id='copy_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  delete copy.seg;
+  if(source.seg)delete source.seg;
+  arr.splice(idx+1,0,copy);
+  recordActivity('duplicate_spot',{day:days[activeDay]?.name,spot:source.name});
+  saveLocal();
+  renderSidebar();renderMarkers();clearRouteLayers();
+  showToast(`已複製「${source.name}」`);
 }
 function openMoveModal(idx){
   if(!requireEdit('移動景點'))return;
@@ -4142,6 +4226,26 @@ document.getElementById('move-modal').onclick=e=>{if(e.target===document.getElem
 // day order modal
 document.getElementById('day-order-modal-x').onclick=()=>document.getElementById('day-order-modal').classList.remove('open');
 document.getElementById('day-order-modal').onclick=e=>{if(e.target===document.getElementById('day-order-modal'))document.getElementById('day-order-modal').classList.remove('open');};
+// cloud conflict modal
+document.getElementById('cloud-conflict-modal-x').onclick=()=>document.getElementById('cloud-conflict-modal').classList.remove('open');
+document.getElementById('cloud-conflict-modal').onclick=e=>{if(e.target===document.getElementById('cloud-conflict-modal'))document.getElementById('cloud-conflict-modal').classList.remove('open');};
+document.getElementById('conflict-load-cloud').onclick=async()=>{
+  document.getElementById('cloud-conflict-modal').classList.remove('open');
+  await loadGasTrip();
+};
+document.getElementById('conflict-open-draft').onclick=()=>{
+  const draftId=gasPendingConflict?.draftId;
+  document.getElementById('cloud-conflict-modal').classList.remove('open');
+  if(draftId){
+    gasPendingConflict=null;
+    switchTrip(draftId);
+  }
+};
+document.getElementById('conflict-force-save').onclick=async()=>{
+  if(!confirm('確定要用這台目前畫面覆蓋雲端最新版嗎？其他裝置剛剛儲存的內容可能會被蓋掉。'))return;
+  document.getElementById('cloud-conflict-modal').classList.remove('open');
+  await saveGasTrip({force:true});
+};
 // info modal
 document.getElementById('info-modal-x').onclick=()=>document.getElementById('info-modal').classList.remove('open');
 document.getElementById('info-modal').onclick=e=>{if(e.target===document.getElementById('info-modal'))document.getElementById('info-modal').classList.remove('open');};

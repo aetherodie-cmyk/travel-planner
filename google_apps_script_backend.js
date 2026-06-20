@@ -53,6 +53,7 @@ function doPost(e) {
     const token = String(e.parameter.token || '');
     const actor = String(e.parameter.actor || 'anonymous').slice(0, 80);
     const baseRevision = String(e.parameter.baseRevision || '');
+    const force = String(e.parameter.force || '') === '1';
     const payloadText = String(e.parameter.payload || '');
     if (!tripId) return json_({ ok: false, error: 'Missing tripId' });
     if (!token) return json_({ ok: false, error: 'Missing edit token' });
@@ -68,15 +69,15 @@ function doPost(e) {
       throw new Error('Edit token does not match this trip');
     }
     const existingRevision = existing ? String(existing.revision || existing.updatedAt || '') : '';
-    if (existingRevision && baseRevision && baseRevision !== existingRevision) {
+    if (!force && existingRevision && baseRevision && baseRevision !== existingRevision) {
       throw new Error(`Cloud version changed since you loaded it. Please load cloud first. current=${existingRevision}`);
     }
-    if (existingRevision && !baseRevision) {
+    if (!force && existingRevision && !baseRevision) {
       throw new Error('Cloud version already exists, but this device has not loaded it yet. Please load cloud first.');
     }
 
     const log = Array.isArray(existing && existing.log) ? existing.log.slice(0, 99) : [];
-    log.unshift({ time: trip.updatedAt, actor, action: existing ? 'save' : 'create' });
+    log.unshift({ time: trip.updatedAt, actor, action: force ? 'force_save' : existing ? 'save' : 'create' });
     const revision = `${Date.now()}_${Utilities.getUuid().slice(0, 8)}`;
     const doc = {
       _app: 'travel-planner-cloud',
