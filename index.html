@@ -752,6 +752,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .timeline-summary .timeline-summary-pill:first-child{flex:0 0 auto}
 .timeline-summary .timeline-summary-pill:nth-child(2){flex:0 0 auto}
 .timeline-edit-btn,.timeline-auto-btn{border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--muted);height:28px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;flex:0 0 auto}
+.timeline-edit-btn{width:32px;padding:0;font-size:14px}
 .timeline-edit-btn:hover,.timeline-auto-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 .timeline-editor{display:none;margin-top:7px;padding:8px;border:1px solid var(--line-soft);border-radius:12px;background:#FAFBFA}
 .timeline-editor.open{display:block}
@@ -769,7 +770,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 @media (min-width:761px) and (max-width:1180px){
   #spot-list .timeline-summary{gap:5px}
   #spot-list .timeline-summary-pill{min-height:26px;padding:3px 7px;font-size:11px}
-  #spot-list .timeline-edit-btn{height:26px;padding:0 7px;font-size:11px}
+  #spot-list .timeline-edit-btn{width:30px;height:26px;padding:0;font-size:13px}
 }
 .time-picker-popover{position:fixed;z-index:2600;width:248px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 44px rgba(0,0,0,.2);padding:10px;display:none}
 .time-picker-popover.open{display:block}
@@ -1575,7 +1576,7 @@ function timelineHtml(spot,i,spots){
       <span class="timeline-summary-pill muted">${stay}</span>
       ${manualNote?`<span class="timeline-summary-pill muted" title="自動預估 ${spot.expectedArrivalTime}">${manualNote}</span>`:''}
       ${travelMissing?'<span class="time-chip warn"><i class="ti ti-route"></i> 先計算路段</span>':''}
-      <button class="timeline-edit-btn" type="button"><i class="ti ti-pencil"></i> ${expanded?'收合':'編輯時間'}</button>
+      <button class="timeline-edit-btn" type="button" title="${expanded?'收合時間編輯':'編輯時間'}" aria-label="${expanded?'收合時間編輯':'編輯時間'}"><i class="ti ti-pencil"></i></button>
     </div>
     <div class="timeline-editor${expanded?' open':''}">
       <div class="timeline-row">
