@@ -1535,6 +1535,7 @@ let gasPollTimer=null;
 let gasSaveTimer=null;
 let gasApplying=false;
 let gasLastRemoteUpdatedAt='';
+let gasLastRemoteRevision='';
 let gasLastLocalSignature='';
 function canEdit(){return accessMode==='edit';}
 function requireEdit(action='修改行程'){
@@ -1956,6 +1957,7 @@ async function loadGasTrip({silent=false}={}){
     applyTripState(remote,{persist:true,render:true});
     gasApplying=false;
     gasLastRemoteUpdatedAt=remoteUpdated;
+    gasLastRemoteRevision=data.meta?.revision||remote.revision||remoteUpdated||'';
     gasLastLocalSignature=remoteSig;
     updateGasStatus();
     if(!silent)showToast('已載入雲端行程');
@@ -1982,6 +1984,7 @@ async function saveGasTrip({silent=false}={}){
     body.set('tripId',currentTripId);
     body.set('token',gasSyncConfig.token);
     body.set('actor',gasSyncConfig.actor||'匿名旅伴');
+    body.set('baseRevision',gasLastRemoteRevision||'');
     body.set('payload',JSON.stringify(payload));
     let data=null;
     try{
@@ -1997,12 +2000,16 @@ async function saveGasTrip({silent=false}={}){
       data={updatedAt:confirmed.trip.updatedAt,updatedBy:confirmed.trip.updatedBy};
     }
     gasLastRemoteUpdatedAt=data.updatedAt||payload.updatedAt;
+    gasLastRemoteRevision=data.revision||data.updatedAt||payload.updatedAt;
     gasLastLocalSignature=gasStateSignature(payload);
     updateGasStatus();
     if(!silent)showToast('已儲存到雲端');
     return data;
   }catch(e){
-    const msg=/failed to fetch/i.test(e.message)?'無法連線 Apps Script。請確認使用 /exec 部署網址，且 Web App 權限設為「知道連結的任何人」。':e.message;
+    let msg=/failed to fetch/i.test(e.message)?'無法連線 Apps Script。請確認使用 /exec 部署網址，且 Web App 權限設為「知道連結的任何人」。':e.message;
+    if(/Cloud version changed|has not loaded/i.test(msg)){
+      msg='雲端已有其他裝置更新，為避免覆蓋，這次沒有儲存。請先按「從雲端載入」確認最新版，再重新修改。';
+    }
     setGasStatus(`儲存失敗：${msg}`,'err');
     return null;
   }

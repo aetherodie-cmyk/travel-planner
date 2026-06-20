@@ -52,6 +52,7 @@ function doPost(e) {
     const tripId = cleanTripId_(e.parameter.tripId);
     const token = String(e.parameter.token || '');
     const actor = String(e.parameter.actor || 'anonymous').slice(0, 80);
+    const baseRevision = String(e.parameter.baseRevision || '');
     const payloadText = String(e.parameter.payload || '');
     if (!tripId) return json_({ ok: false, error: 'Missing tripId' });
     if (!token) return json_({ ok: false, error: 'Missing edit token' });
@@ -66,9 +67,17 @@ function doPost(e) {
     if (existing && String(existing.editToken || '') !== token) {
       throw new Error('Edit token does not match this trip');
     }
+    const existingRevision = existing ? String(existing.revision || existing.updatedAt || '') : '';
+    if (existingRevision && baseRevision && baseRevision !== existingRevision) {
+      throw new Error(`Cloud version changed since you loaded it. Please load cloud first. current=${existingRevision}`);
+    }
+    if (existingRevision && !baseRevision) {
+      throw new Error('Cloud version already exists, but this device has not loaded it yet. Please load cloud first.');
+    }
 
     const log = Array.isArray(existing && existing.log) ? existing.log.slice(0, 99) : [];
     log.unshift({ time: trip.updatedAt, actor, action: existing ? 'save' : 'create' });
+    const revision = `${Date.now()}_${Utilities.getUuid().slice(0, 8)}`;
     const doc = {
       _app: 'travel-planner-cloud',
       _schema: 2,
@@ -77,6 +86,7 @@ function doPost(e) {
       title: trip.title || tripId,
       updatedAt: trip.updatedAt,
       updatedBy: actor,
+      revision,
       editToken: token,
       log,
       trip
@@ -88,6 +98,7 @@ function doPost(e) {
       tripId,
       updatedAt: doc.updatedAt,
       updatedBy: actor,
+      revision,
       fileId: file.getId(),
       fileName: file.getName(),
       bytes: JSON.stringify(doc).length
@@ -165,6 +176,7 @@ function publicMeta_(doc, file) {
     title: doc.title || doc.trip && doc.trip.title || '',
     updatedAt: doc.updatedAt || doc.trip && doc.trip.updatedAt || '',
     updatedBy: doc.updatedBy || doc.trip && doc.trip.updatedBy || '',
+    revision: doc.revision || doc.updatedAt || doc.trip && doc.trip.updatedAt || '',
     storage: doc.storage || 'google-drive-json',
     fileId: file ? file.getId() : undefined,
     fileName: file ? file.getName() : undefined
