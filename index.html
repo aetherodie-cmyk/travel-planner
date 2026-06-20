@@ -1215,8 +1215,8 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
         <button class="trip-action-btn" id="gas-enable-btn"><i class="ti ti-cloud-upload"></i> 啟用 / 重新連線</button>
-        <button class="trip-action-btn secondary" id="gas-load-btn"><i class="ti ti-download"></i> 載入雲端</button>
-        <button class="trip-action-btn secondary" id="gas-save-btn"><i class="ti ti-upload"></i> 儲存雲端</button>
+        <button class="trip-action-btn secondary" id="gas-load-btn"><i class="ti ti-download"></i> 從雲端載入</button>
+        <button class="trip-action-btn secondary" id="gas-save-btn"><i class="ti ti-upload"></i> 建立/儲存雲端</button>
         <button class="trip-action-btn danger" id="gas-disable-btn"><i class="ti ti-cloud-off"></i> 停用同步</button>
       </div>
       <div class="cloud-status" id="gas-status">尚未啟用。適合先 2 人共編；純檢視連結可讀取，本機編輯需有 token。</div>
@@ -1916,7 +1916,7 @@ async function loadGasTrip({silent=false}={}){
     }
     const remote=data.trip;
     if(!remote){
-      setGasStatus(canEdit()?'雲端尚未建立這個 tripId，按「儲存雲端」即可建立。':'雲端找不到這個旅程。',canEdit()?'sync':'err');
+      setGasStatus(canEdit()?'雲端尚未建立這個旅程。若要把目前本機旅程放到 Drive，請按「建立/儲存雲端」。':'雲端找不到這個旅程；請確認連結的 tripId 是否正確，或請共編者先建立雲端旅程。','sync');
       return null;
     }
     const remoteUpdated=remote.updatedAt||data.updatedAt||'';
