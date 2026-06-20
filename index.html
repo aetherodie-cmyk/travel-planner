@@ -1845,6 +1845,10 @@ function updateGasStatus(){
     setGasStatus('尚未啟用。適合先 2 人共編；純檢視連結可讀取，本機編輯需有 token。');
     return;
   }
+  if(canEdit()&&!gasSyncConfig.token){
+    setGasStatus(`Google Drive JSON 已可讀取：${currentTripId}。尚未填入編輯 Token，這台裝置的修改只會留在本機，不會寫入雲端。`,'sync');
+    return;
+  }
   const who=gasSyncConfig.actor||'匿名旅伴';
   const last=gasLastRemoteUpdatedAt?`，遠端更新：${new Date(gasLastRemoteUpdatedAt).toLocaleString('zh-TW')}`:'';
   setGasStatus(`Google Drive JSON 同步中：${currentTripId}（${who}）${last}`,'ok');
@@ -1901,6 +1905,10 @@ function gasStateSignature(trip){
 }
 function scheduleGasSave(){
   if(!gasSyncEnabled||gasApplying||!canEdit())return;
+  if(!gasSyncConfig.token){
+    setGasStatus(`Google Drive JSON 已可讀取：${currentTripId}。尚未填入編輯 Token，這次修改只存在本機。`,'sync');
+    return;
+  }
   clearTimeout(gasSaveTimer);
   gasSaveTimer=setTimeout(()=>saveGasTrip({silent:true}),1200);
 }
