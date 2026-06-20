@@ -728,7 +728,8 @@ body.view-only .timeline-edit-btn,
 body.view-only .seg-actions,
 body.view-only .seg-mode-btns,
 body.view-only .day-tab-del,
-body.view-only .day-tab.add-day{display:none!important}
+body.view-only .day-tab.add-day,
+body.view-only .day-tab.order-days{display:none!important}
 body.view-only .spot-item,
 body.view-only .day-tab,
 body.view-only .day-tab.active{cursor:pointer}
@@ -761,6 +762,8 @@ body.view-only .empty-day small{display:none}
 .day-tab.tab-drag-over-right{border-right:2px solid var(--primary)}
 .day-tab.add-day{border-style:dashed;color:var(--muted);cursor:pointer}
 .day-tab.add-day:hover{color:var(--primary-strong);border-color:var(--primary)}
+.day-tab.order-days{border-style:dashed;background:#fff;color:var(--muted);cursor:pointer}
+.day-tab.order-days:hover{color:var(--primary-strong);border-color:var(--primary)}
 /* spot list */
 #spot-list{flex:1;overflow-y:auto;padding:12px 10px 12px 14px}
 .spot-card{display:flex;margin-bottom:0}
@@ -904,6 +907,13 @@ body.view-only .empty-day small{display:none}
 .mdl-day-ct{font-size:11px;color:#888}
 .mdl-move-btn{padding:4px 10px;border:1px solid #ddd;border-radius:7px;background:#f5f5f5;cursor:pointer;font-size:12px;color:#333}
 .mdl-move-btn:hover{background:#e9f2fd;border-color:#378ADD;color:#185FA5}
+.day-order-row{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid #f0f0f0}
+.day-order-row:last-child{border-bottom:none}
+.day-order-no{width:26px;height:26px;border-radius:50%;background:var(--primary-soft);color:var(--primary-strong);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900}
+.day-order-actions{display:flex;gap:6px}
+.day-order-actions button{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--muted);cursor:pointer}
+.day-order-actions button:hover:not(:disabled){border-color:var(--primary);color:var(--primary-strong);background:var(--primary-soft)}
+.day-order-actions button:disabled{opacity:.35;cursor:not-allowed}
 /* key modal */
 #key-modal .modal-box{width:380px}
 #key-modal p{font-size:12px;color:#888;margin-bottom:12px;line-height:1.6}
@@ -1319,6 +1329,15 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
   <div class="modal-box">
     <div class="modal-hd"><h2>移動景點到…</h2><button class="modal-x" id="move-modal-x">×</button></div>
     <div id="move-modal-body"></div>
+  </div>
+</div>
+
+<!-- DAY ORDER MODAL -->
+<div class="overlay" id="day-order-modal">
+  <div class="modal-box">
+    <div class="modal-hd"><h2><i class="ti ti-arrows-sort"></i> 調整天數順序</h2><button class="modal-x" id="day-order-modal-x">×</button></div>
+    <div class="trip-help" style="margin-bottom:10px">移動的是整天行程，該天所有景點、時間與路段設定都會一起搬動。</div>
+    <div id="day-order-modal-body"></div>
   </div>
 </div>
 
@@ -2205,18 +2224,22 @@ function renderTabs(){
         const mid=rect.left+rect.width/2;
         let insertAt=e.clientX<mid?i:i+1;
         if(tabDragSrc<insertAt)insertAt--;
-        const moved=days.splice(tabDragSrc,1)[0];
-        days.splice(insertAt,0,moved);
-        activeDay=insertAt;
+        const from=tabDragSrc;
         tabDragSrc=null;
-        recordActivity('reorder_day',{day:moved.name,to:insertAt});
-        saveLocal();
-        renderSidebar();renderMarkers();clearRouteLayers();
+        reorderDay(from,insertAt);
       });
       t.querySelector('.day-tab-del').onclick=e=>{e.stopPropagation();deleteDay(i);};
     }
     el.appendChild(t);
   });
+  if(canEdit()&&days.length>1){
+    const order=document.createElement('div');
+    order.className='day-tab order-days';
+    order.innerHTML='<i class="ti ti-arrows-sort"></i>';
+    order.title='調整天數順序';
+    order.onclick=openDayOrderModal;
+    el.appendChild(order);
+  }
   const add=document.createElement('div');
   add.className='day-tab add-day';
   add.innerHTML='<i class="ti ti-plus"></i>';
@@ -2238,6 +2261,14 @@ function renderMobileTabs(){
     if(canEdit())t.querySelector('.day-tab-del').onclick=e=>{e.stopPropagation();deleteDay(i);};
     el.appendChild(t);
   });
+  if(canEdit()&&days.length>1){
+    const order=document.createElement('div');
+    order.className='day-tab order-days';
+    order.innerHTML='<i class="ti ti-arrows-sort"></i>';
+    order.title='調整天數順序';
+    order.onclick=openDayOrderModal;
+    el.appendChild(order);
+  }
   const add=document.createElement('div');
   add.className='day-tab add-day';
   add.innerHTML='<i class="ti ti-plus"></i>';
@@ -2808,6 +2839,47 @@ function deleteDay(i){
   recordActivity('delete_day',{day:removed});
   saveLocal();
   renderSidebar();renderMarkers();clearRouteLayers();
+}
+function reorderDay(from,to){
+  if(!requireEdit('調整天數順序'))return;
+  if(from===to||from<0||to<0||from>=days.length||to>=days.length)return;
+  const moved=days.splice(from,1)[0];
+  days.splice(to,0,moved);
+  if(activeDay===from)activeDay=to;
+  else if(from<activeDay&&to>=activeDay)activeDay--;
+  else if(from>activeDay&&to<=activeDay)activeDay++;
+  recordActivity('reorder_day',{day:moved.name,from,to});
+  saveLocal();
+  renderSidebar();renderMarkers();clearRouteLayers();
+  if(document.getElementById('day-order-modal')?.classList.contains('open'))renderDayOrderModal();
+}
+function openDayOrderModal(){
+  if(!requireEdit('調整天數順序'))return;
+  renderDayOrderModal();
+  document.getElementById('day-order-modal').classList.add('open');
+}
+function renderDayOrderModal(){
+  const box=document.getElementById('day-order-modal-body');
+  if(!box)return;
+  box.innerHTML='';
+  days.forEach((day,i)=>{
+    const row=document.createElement('div');
+    row.className='day-order-row';
+    row.innerHTML=`
+      <div class="day-order-no">${i+1}</div>
+      <div>
+        <div class="mdl-day-name">${esc(day.name)}</div>
+        <div class="mdl-day-ct">${day.spots.length} 個景點</div>
+      </div>
+      <div class="day-order-actions">
+        <button title="上移" ${i===0?'disabled':''}><i class="ti ti-arrow-up"></i></button>
+        <button title="下移" ${i===days.length-1?'disabled':''}><i class="ti ti-arrow-down"></i></button>
+      </div>`;
+    const [up,down]=row.querySelectorAll('button');
+    up.onclick=()=>reorderDay(i,i-1);
+    down.onclick=()=>reorderDay(i,i+1);
+    box.appendChild(row);
+  });
 }
 function renameDay(i){
   if(!requireEdit('重新命名天數'))return;
@@ -4060,6 +4132,9 @@ document.getElementById('key-modal').onclick=e=>{if(e.target===document.getEleme
 // move modal
 document.getElementById('move-modal-x').onclick=()=>document.getElementById('move-modal').classList.remove('open');
 document.getElementById('move-modal').onclick=e=>{if(e.target===document.getElementById('move-modal'))document.getElementById('move-modal').classList.remove('open');};
+// day order modal
+document.getElementById('day-order-modal-x').onclick=()=>document.getElementById('day-order-modal').classList.remove('open');
+document.getElementById('day-order-modal').onclick=e=>{if(e.target===document.getElementById('day-order-modal'))document.getElementById('day-order-modal').classList.remove('open');};
 // info modal
 document.getElementById('info-modal-x').onclick=()=>document.getElementById('info-modal').classList.remove('open');
 document.getElementById('info-modal').onclick=e=>{if(e.target===document.getElementById('info-modal'))document.getElementById('info-modal').classList.remove('open');};
