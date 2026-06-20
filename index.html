@@ -732,19 +732,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .day-tab.add-day{border-style:dashed;color:var(--muted);cursor:pointer}
 .day-tab.add-day:hover{color:var(--primary-strong);border-color:var(--primary)}
 /* spot list */
-#spot-list{flex:1;overflow-y:auto;padding:10px 10px 10px 14px}
+#spot-list{flex:1;overflow-y:auto;padding:12px 10px 12px 14px}
 .spot-card{display:flex;margin-bottom:0}
 .spot-timeline{display:flex;flex-direction:column;align-items:center;width:26px;flex-shrink:0}
 .spot-dot{width:21px;height:21px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
 .spot-vline{width:2px;flex:1;min-height:6px;background:var(--line);margin:0 auto}
-.spot-body-wrap{flex:1;min-width:0;padding-bottom:2px}
-.spot-item{display:flex;align-items:flex-start;gap:7px;padding:7px 9px;border:1px solid var(--line-soft);border-radius:var(--radius-sm);cursor:grab;background:var(--surface);transition:border-color .15s,background .15s,box-shadow .15s}
-.spot-item:hover{border-color:var(--line);background:#FAFBFA}
+.spot-body-wrap{flex:1;min-width:0;padding-bottom:5px}
+.spot-item{display:flex;align-items:flex-start;gap:7px;padding:10px 11px 11px;border:1px solid #D8DADC;border-radius:9px;cursor:grab;background:var(--surface);box-shadow:0 1px 3px rgba(20,27,36,.05);transition:border-color .15s,background .15s,box-shadow .15s}
+.spot-item:hover{border-color:#C8CDD2;background:#fff;box-shadow:0 2px 8px rgba(20,27,36,.08)}
 .spot-item.dragging{opacity:.4;border-color:var(--primary)}
 .spot-item.drag-over{border-color:var(--primary);background:var(--primary-soft)}
 .spot-info{flex:1;min-width:0}
-.spot-name{font-size:13px;font-weight:750;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.spot-meta{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spot-kind{display:block;color:var(--primary);font-size:10px;font-weight:850;line-height:1;margin-bottom:5px}
+.spot-name{font-size:15px;font-weight:850;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.spot-meta{font-size:12px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .timeline-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px}
 .timeline-summary{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;margin-top:7px;min-width:0}
 .timeline-summary-pill{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:28px;border-radius:9px;background:var(--surface-soft);border:1px solid var(--line-soft);padding:4px 8px;color:var(--text);font-size:12px;font-weight:800;white-space:nowrap;flex:0 1 auto;min-width:0}
@@ -798,10 +799,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .spot-btn.move:hover{color:var(--primary-strong);background:var(--primary-soft)}
 .spot-btn.info-btn:hover{color:#BA7517;background:#FAEEDA}
 /* segment connector */
-.seg-connector{display:flex;align-items:stretch;padding:2px 0}
+.seg-connector{display:flex;align-items:stretch;padding:4px 0 8px}
 .seg-timeline{display:flex;flex-direction:column;align-items:center;width:26px;flex-shrink:0}
 .seg-vline{width:2px;flex:1;background:var(--line);margin:0 auto}
-.seg-body{flex:1;min-width:0;display:flex;align-items:center;gap:5px;padding:3px 5px 3px 0;flex-wrap:wrap}
+.seg-body{flex:1;min-width:0;display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:8px;background:#F6F7F8;flex-wrap:wrap}
+.seg-label{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:11px;font-weight:850;white-space:nowrap;flex-shrink:0}
+.seg-label::before{content:'';width:9px;height:2px;border-radius:1px;background:#D1D5D8}
 .seg-mode-btns{display:flex;gap:2px;flex-shrink:0}
 .seg-mode-btn{width:24px;height:20px;border:1px solid var(--line);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--surface-soft);color:#9AA0A6;padding:0;transition:all .12s}
 .seg-mode-btn:hover{border-color:var(--primary);color:var(--primary-strong)}
@@ -1792,6 +1795,7 @@ function renderSegmentConnector(spot,i){
   conn.innerHTML=`
     <div class="seg-timeline"><div class="seg-vline"></div></div>
     <div class="seg-body">
+      <div class="seg-label">前往下一站</div>
       <div class="seg-mode-btns">${mbHtml}</div>
       <div class="seg-result-wrap">${segmentResultHtml(seg,mode)}</div>
       <button class="seg-tool-btn seg-manual-toggle" type="button"><i class="ti ti-pencil"></i> ${expanded?'收合':'手動'}</button>
@@ -1877,6 +1881,7 @@ function renderSpotList(){
       <div class="spot-body-wrap">
         <div class="spot-item" draggable="true" data-idx="${i}">
           <div class="spot-info">
+            <div class="spot-kind">景點</div>
             <div class="spot-name">${spot.name}</div>
             <div class="spot-meta">${spot.addr||'自訂位置'}</div>
             ${timelineHtml(spot,i,spots)}
@@ -1934,6 +1939,7 @@ function renderMobileSpotList(){
       <div class="spot-body-wrap">
         <div class="spot-item" data-idx="${i}">
           <div class="spot-info">
+            <div class="spot-kind">景點</div>
             <div class="spot-name">${spot.name}</div>
             <div class="spot-meta">${spot.addr||'自訂位置'}</div>
             ${timelineHtml(spot,i,spots)}
