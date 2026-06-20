@@ -795,7 +795,8 @@ body.view-only .empty-day small{display:none}
 .timeline-summary .timeline-summary-pill:first-child{flex:0 1 auto}
 .timeline-summary .timeline-summary-pill:nth-child(2){flex:0 1 auto}
 .timeline-edit-btn,.timeline-auto-btn{border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--muted);height:28px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;flex:0 0 auto}
-.timeline-edit-btn{width:32px;padding:0;font-size:14px}
+.timeline-edit-btn{width:32px;padding:0;font-size:14px;opacity:0;pointer-events:none;transition:opacity .12s,background .12s,border-color .12s,color .12s}
+.spot-item:hover .timeline-edit-btn,.spot-item.tools-open .timeline-edit-btn,.timeline-box.editor-open .timeline-edit-btn{opacity:1;pointer-events:auto}
 .timeline-edit-btn:hover,.timeline-auto-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 .timeline-editor{display:none;margin-top:7px;padding:8px;border:1px solid var(--line-soft);border-radius:12px;background:#FAFBFA}
 .timeline-editor.open{display:block}
@@ -834,7 +835,8 @@ body.view-only .empty-day small{display:none}
 .time-picker-actions button{flex:1;height:34px;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer}
 .time-cancel-btn,.time-clear-btn{border:1px solid var(--line);background:var(--surface);color:var(--muted)}
 .time-done-btn{border:none;background:var(--primary);color:#fff}
-.spot-actions{display:flex;gap:2px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end;max-width:44px}
+.spot-actions{display:flex;gap:2px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end;max-width:44px;opacity:0;pointer-events:none;transition:opacity .12s}
+.spot-item:hover .spot-actions,.spot-item.tools-open .spot-actions{opacity:1;pointer-events:auto}
 .spot-btn{width:20px;height:20px;border:none;background:none;cursor:pointer;color:#B4B8BE;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;padding:0}
 .spot-btn:hover{background:var(--surface-soft);color:var(--text)}
 .spot-btn.del:hover{color:var(--danger);background:#fdf0f0}
@@ -845,12 +847,13 @@ body.view-only .empty-day small{display:none}
 .seg-connector{display:flex;align-items:stretch;padding:4px 0 8px}
 .seg-timeline{display:flex;flex-direction:column;align-items:center;width:26px;flex-shrink:0}
 .seg-vline{width:2px;flex:1;background:var(--line);margin:0 auto}
-.seg-body{flex:1;min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:7px;padding:8px 9px;border-radius:8px;background:#F6F7F8}
+.seg-body{flex:1;min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:7px;padding:8px 9px;border-radius:8px;background:#F6F7F8}
 .seg-main{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:nowrap}
 .seg-label{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;font-weight:900;white-space:nowrap;flex-shrink:0}
 .seg-label::before{display:none}
 .seg-mode-btns{display:flex;gap:2px;flex-shrink:0}
 .seg-mode-btn{width:24px;height:20px;border:1px solid var(--line);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--surface-soft);color:#9AA0A6;padding:0;transition:all .12s}
+.seg-connector:not(:hover):not(.tools-open):not(.seg-expanded) .seg-mode-btn:not(.active){display:none}
 .seg-mode-btn:hover{border-color:var(--primary);color:var(--primary-strong)}
 .seg-mode-btn.active.walk{border-color:#1D9E75;background:#E1F5EE;color:#0F6E56}
 .seg-mode-btn.active.bike{border-color:#BA7517;background:#FAEEDA;color:#854F0B}
@@ -865,13 +868,14 @@ body.view-only .empty-day small{display:none}
 .seg-warning{display:inline-flex;align-items:center;margin-left:3px;padding:1px 5px;border-radius:5px;background:#fff9ef;border:1px solid #F0D6A5;color:#BA7517;font-size:10px;font-weight:800;vertical-align:middle}
 .seg-warning.manual{background:#E6F1FB;border-color:#9BC7F2;color:#185FA5}
 .seg-warning-text{display:block;margin-top:2px;color:#BA7517;font-size:10px;font-weight:700;line-height:1.35;white-space:normal}
-.seg-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;width:100%;white-space:nowrap}
+.seg-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;width:100%;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s}
+.seg-connector:hover .seg-actions,.seg-connector.tools-open .seg-actions,.seg-connector.seg-expanded .seg-actions{opacity:1;pointer-events:auto}
 .seg-tool-btn,.seg-calc-btn{height:26px;padding:0 7px;border:1px solid var(--line);border-radius:7px;background:var(--surface);cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:4px}
 .seg-tool-btn:hover,.seg-calc-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 .seg-tool-btn.danger:hover{background:#fff5f5;border-color:#fcc;color:var(--danger)}
 .seg-google-route{background:#E8F5E9;border-color:#A5D6A7;color:#2E7D32;text-decoration:none}
 .seg-google-route:hover{background:#C8E6C9;border-color:#66BB6A;color:#1B5E20}
-.seg-manual-editor{display:none;gap:7px;padding:7px 8px;border:1px solid var(--line-soft);border-radius:9px;background:#FAFBFA;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.seg-manual-editor{display:none;gap:7px;padding:7px 8px;border:1px solid var(--line-soft);border-radius:9px;background:#FAFBFA;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-column:1 / -1}
 .seg-manual-editor.open{display:grid}
 .seg-google-route{justify-content:center;grid-column:1 / -1}
 .seg-manual-field{display:flex;align-items:center;gap:5px;min-width:0;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:4px 8px;color:var(--muted);font-size:11px;font-weight:700}
@@ -1020,6 +1024,9 @@ body.view-only .empty-day small{display:none}
 .spot-form-field input:focus,.spot-form-field textarea:focus{border-color:#378ADD}
 .spot-form-field textarea{min-height:82px;resize:vertical}
 .spot-form-section-title{font-size:11px;font-weight:800;color:#777;margin:4px 0 8px;display:flex;align-items:center;gap:5px}
+.spot-editor-top-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,220px);gap:10px;align-items:end;margin-bottom:10px}
+.spot-editor-category{display:flex;flex-direction:column;gap:4px;min-width:0}
+.spot-editor-category label{font-size:10px;font-weight:700;color:#999;letter-spacing:.4px}
 .spot-json-panel{display:none;margin:8px 0 12px}
 .spot-json-panel textarea{width:100%;min-height:118px;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:12px;font-family:monospace;color:#111;outline:none;resize:vertical;line-height:1.6}
 .spot-json-panel textarea:focus{border-color:#7F77DD}
@@ -1151,6 +1158,7 @@ body.mobile-ui #info-modal .modal-box{width:100%;max-height:88dvh;border-radius:
 body.mobile-ui #info-modal-body{max-height:calc(88dvh - 92px);padding-bottom:calc(env(safe-area-inset-bottom) + 18px)}
 body.mobile-ui .spot-form-grid{grid-template-columns:1fr}
 body.mobile-ui #key-modal .modal-box,body.mobile-ui #import-modal .modal-box,body.mobile-ui #move-modal .modal-box,body.mobile-ui #trip-modal .modal-box{width:calc(100vw - 24px);max-height:86dvh}
+body.mobile-ui .spot-editor-top-row{grid-template-columns:1fr}
 body.mobile-ui .time-picker-popover{left:12px!important;right:12px!important;bottom:calc(env(safe-area-inset-bottom) + 12px)!important;top:auto!important;width:auto;border-radius:18px;padding:14px}
 body.mobile-ui .time-picker-options{max-height:224px}
 body.mobile-ui .time-option{height:40px;font-size:17px}
@@ -1375,8 +1383,9 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
     <div id="info-modal-body">
       <div class="info-view active" id="info-view"></div>
       <div class="info-edit" id="info-edit">
-        <div class="info-action-row" style="margin-bottom:8px">
+        <div class="spot-editor-top-row">
           <button class="json-paste-trigger" id="json-paste-btn" type="button"><i class="ti ti-code"></i> 貼入 JSON 自動填入</button>
+          <div class="spot-editor-category"><label>分類</label><select class="import-day-sel" id="note-category" style="height:38px"></select></div>
         </div>
         <div class="spot-json-panel" id="json-paste-area">
           <textarea id="json-input" placeholder='例：{ "name": "十和田湖", "address": "青森縣十和田市", "lat": 40.468, "lng": 140.878, "opening_hours": "全天開放", "admission_fee": "免費", "phone": "0176-75-2425", "website": "https://example.com", "remarks": "注意天候" }'></textarea>
@@ -1392,7 +1401,6 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         </div>
         <div class="spot-form-section-title"><i class="ti ti-map-pin"></i> 景點資料</div>
         <div class="spot-form-grid">
-          <div class="spot-form-field"><label>分類</label><select class="import-day-sel" id="note-category" style="height:38px"></select></div>
           <div class="spot-form-field"><label>景點名稱</label><input id="note-name" placeholder="例：十和田湖"/></div>
           <div class="spot-form-field"><label>地址</label><input id="note-addr" placeholder="例：青森縣十和田市"/></div>
           <div class="spot-form-field"><label>緯度</label><input id="note-lat" inputmode="decimal" placeholder="例：40.468"/></div>
@@ -1534,6 +1542,8 @@ let uiMode=localStorage.getItem('tp_ui_mode')||'auto';
 let mobileSheetState='half';
 let expandedTimelineIds=new Set();
 let expandedSegmentIds=new Set();
+let activeSpotToolsId=null;
+let activeSegmentToolsId=null;
 const MOBILE_SHEET_STATES=['peek','half','full'];
 const MOBILE_SHEET_LABELS={peek:'景點日切換',half:'行程清單',full:'聚焦清單'};
 const UI_MODE_LABELS={auto:'版面：自動',desktop:'版面：桌面',mobile:'版面：手機'};
@@ -2438,7 +2448,7 @@ function timelineHtml(spot,i,spots){
   const stay=spot.stayMinutes!==undefined&&spot.stayMinutes!==''?`停留 ${spot.stayMinutes} 分`:'停留未設定';
   const manualNote=i>0&&spot.arrivalTime&&spot.expectedArrivalTime&&spot.timeAutoArrival===false?minutesDiffText(spot.arrivalTime,spot.expectedArrivalTime):'';
   const autoNote=i>0&&spot.expectedArrivalTime&&spot.timeAutoArrival!==false?`自動預估抵達 ${spot.expectedArrivalTime}`:'';
-  return `<div class="timeline-box" data-time-idx="${i}">
+  return `<div class="timeline-box${expanded?' editor-open':''}" data-time-idx="${i}">
     <div class="timeline-summary">
       <span class="timeline-summary-pill${hasAny?'':' muted'}"><i class="ti ti-clock"></i> ${range}</span>
       <span class="timeline-summary-pill muted">${stay}</span>
@@ -2656,7 +2666,8 @@ function renderSegmentConnector(spot,i){
   const googleRouteUrl=nextSpot?googleDirectionsUrl(spot,nextSpot,seg.mode):'#';
   const conn=document.createElement('div');
   const expanded=expandedSegmentIds.has(spot.id);
-  conn.className='seg-connector';
+  const toolsOpen=activeSegmentToolsId===spot.id;
+  conn.className=`seg-connector${expanded?' seg-expanded':''}${toolsOpen?' tools-open':''}`;
   const mbHtml=MODES.map(m=>`<button class="seg-mode-btn${seg.mode===m.id?' active '+m.cls:''}" data-mode="${m.id}" title="${m.label}"><i class="ti ${m.icon}"></i></button>`).join('');
   conn.innerHTML=`
     <div class="seg-timeline"><div class="seg-vline"></div></div>
@@ -2667,12 +2678,12 @@ function renderSegmentConnector(spot,i){
       </div>
       <div class="seg-result-wrap">${segmentResultHtml(seg,mode)}</div>
       <div class="seg-actions">
+        <a class="seg-tool-btn seg-google-route" href="${googleRouteUrl}" target="_blank" rel="noopener"><i class="ti ti-brand-google-maps"></i> Google 路線</a>
         <button class="seg-tool-btn seg-manual-toggle" type="button"><i class="ti ti-pencil"></i> ${expanded?'收合':'手動'}</button>
         ${hasManualSegment(seg)?'<button class="seg-tool-btn danger seg-manual-clear" type="button"><i class="ti ti-x"></i> 清除</button>':''}
         <button class="seg-calc-btn" type="button"><i class="ti ti-route"></i> 計算</button>
       </div>
       <div class="seg-manual-editor${expanded?' open':''}">
-        <a class="seg-tool-btn seg-google-route" href="${googleRouteUrl}" target="_blank" rel="noopener"><i class="ti ti-brand-google-maps"></i> Google 路線</a>
         <label class="seg-manual-field">時間 <input class="seg-manual-duration" type="number" min="1" step="1" placeholder="分鐘" value="${seg.manualDurationMin??''}"> 分</label>
         <label class="seg-manual-field">距離 <input class="seg-manual-distance" type="number" min="0" step="0.1" placeholder="選填" value="${seg.manualDistanceKm??''}"> km</label>
         <button class="seg-manual-save" type="button"><i class="ti ti-check"></i> 套用</button>
@@ -2683,6 +2694,11 @@ function renderSegmentConnector(spot,i){
     node.addEventListener('click',e=>e.stopPropagation());
     node.addEventListener('mousedown',e=>e.stopPropagation());
   });
+  conn.onclick=e=>{
+    if(e.target.closest('button,input,a'))return;
+    activeSegmentToolsId=activeSegmentToolsId===spot.id?null:spot.id;
+    renderSidebar();
+  };
   conn.querySelectorAll('.seg-mode-btn').forEach(btn=>{
     btn.onclick=()=>{
       if(!requireEdit('修改交通方式'))return;
@@ -2746,6 +2762,7 @@ function renderSpotList(){
   const df=DAY_FILL[activeDay%DAY_FILL.length];
   spots.forEach((spot,i)=>{
     const isLast=i===spots.length-1;
+    const toolsOpen=activeSpotToolsId===spot.id;
     // spot card
     const card=document.createElement('div');
     card.className='spot-card';
@@ -2755,7 +2772,7 @@ function renderSpotList(){
         ${!isLast?'<div class="spot-vline"></div>':''}
       </div>
       <div class="spot-body-wrap">
-        <div class="spot-item" draggable="${canEdit()?'true':'false'}" data-idx="${i}">
+        <div class="spot-item${toolsOpen?' tools-open':''}" draggable="${canEdit()?'true':'false'}" data-idx="${i}">
           <div class="spot-info">
             <div class="spot-kind-row"><div class="spot-kind">景點</div>${spotCategoryHtml(spot)}</div>
             <div class="spot-name">${spot.name}</div>
@@ -2811,6 +2828,7 @@ function renderMobileSpotList(){
   const df=DAY_FILL[activeDay%DAY_FILL.length];
   spots.forEach((spot,i)=>{
     const isLast=i===spots.length-1;
+    const toolsOpen=activeSpotToolsId===spot.id;
     const card=document.createElement('div');
     card.className='spot-card';
     card.innerHTML=`
@@ -2819,7 +2837,7 @@ function renderMobileSpotList(){
         ${!isLast?'<div class="spot-vline"></div>':''}
       </div>
       <div class="spot-body-wrap">
-        <div class="spot-item" data-idx="${i}">
+        <div class="spot-item${toolsOpen?' tools-open':''}" data-idx="${i}">
           <div class="spot-info">
             <div class="spot-kind-row"><div class="spot-kind">景點</div>${spotCategoryHtml(spot)}</div>
             <div class="spot-name">${spot.name}</div>
@@ -2836,7 +2854,12 @@ function renderMobileSpotList(){
         </div>
       </div>`;
     const si=card.querySelector('.spot-item');
-    si.onclick=e=>{if(!e.target.closest('button')&&!e.target.closest('.timeline-box'))openInfoModal(spot.id);};
+    si.onclick=e=>{
+      if(e.target.closest('button')||e.target.closest('.timeline-box'))return;
+      if(!canEdit()){openInfoModal(spot.id);return;}
+      activeSpotToolsId=activeSpotToolsId===spot.id?null:spot.id;
+      renderSidebar();
+    };
     if(canEdit()){
       card.querySelector('.spot-btn.del').onclick=e=>{e.stopPropagation();removeSpot(i);};
       card.querySelector('.spot-btn.copy').onclick=e=>{e.stopPropagation();duplicateSpot(i);};
@@ -3347,6 +3370,17 @@ function hasSpotNotes(spot){
   const n=spot?.notes||{};
   return NOTE_FIELDS.some(f=>String(n[f.k]||'').trim());
 }
+function linkifyText(value){
+  const safe=esc(value);
+  return safe.replace(/https?:\/\/[^\s<>"']+/g,url=>{
+    let core=url,tail='';
+    while(/[),.，。；;!?！？]$/.test(core)){
+      tail=core.slice(-1)+tail;
+      core=core.slice(0,-1);
+    }
+    return `<a href="${core}" target="_blank" rel="noopener" style="color:var(--primary-strong);word-break:break-all">${core}</a>${tail}`;
+  }).replace(/\n/g,'<br>');
+}
 function notesSummaryHtml(spot,{standalone=false}={}){
   const n=spot.notes||{};
   const rows=NOTE_FIELDS.map(f=>{
@@ -3355,7 +3389,7 @@ function notesSummaryHtml(spot,{standalone=false}={}){
     const safe=esc(val);
     const content=f.k==='website'
       ? `<a href="${safe}" target="_blank" style="color:var(--primary-strong);word-break:break-all">${safe}</a>`
-      : safe.replace(/\n/g,'<br>');
+      : linkifyText(val);
     return `<div class="info-note-row"><span>${f.l}</span><div>${content}</div></div>`;
   }).join('');
   if(!rows)return '';
