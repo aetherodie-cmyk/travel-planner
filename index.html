@@ -1191,7 +1191,29 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         <button class="trip-action-btn secondary" id="trip-new-btn"><i class="ti ti-plus"></i> 新增旅程</button>
       </div>
       <div class="trip-list" id="trip-list"></div>
-      <div class="trip-section-title"><i class="ti ti-cloud"></i> 雲端共編</div>
+      <div class="trip-section-title"><i class="ti ti-cloud"></i> Google JSON 簡易共編</div>
+      <div class="trip-form-field">
+        <label>Apps Script Web App URL</label>
+        <input id="gas-url-input" placeholder="貼上部署後的 /exec 網址"/>
+      </div>
+      <div class="trip-form-grid">
+        <div class="trip-form-field">
+          <label>你的暱稱</label>
+          <input id="gas-actor-input" placeholder="例：Iris"/>
+        </div>
+        <div class="trip-form-field">
+          <label>編輯 Token</label>
+          <input id="gas-token-input" placeholder="兩位共編者使用同一組密碼"/>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button class="trip-action-btn" id="gas-enable-btn"><i class="ti ti-cloud-upload"></i> 啟用 / 重新連線</button>
+        <button class="trip-action-btn secondary" id="gas-load-btn"><i class="ti ti-download"></i> 載入雲端</button>
+        <button class="trip-action-btn secondary" id="gas-save-btn"><i class="ti ti-upload"></i> 儲存雲端</button>
+        <button class="trip-action-btn danger" id="gas-disable-btn"><i class="ti ti-cloud-off"></i> 停用同步</button>
+      </div>
+      <div class="cloud-status" id="gas-status">尚未啟用。適合先 2 人共編；純檢視連結可讀取，本機編輯需有 token。</div>
+      <div class="trip-section-title"><i class="ti ti-cloud"></i> Firebase 共編（進階）</div>
       <div class="trip-form-field">
         <label>Firebase Web Config JSON</label>
         <textarea id="cloud-config-input" placeholder='{ "apiKey": "...", "authDomain": "...", "projectId": "..." }'></textarea>
@@ -1464,6 +1486,7 @@ const UI_MODE_LABELS={auto:'版面：自動',desktop:'版面：桌面',mobile:'�
 const STORAGE_KEY='tp_v6_trips';
 const params=new URLSearchParams(location.search);
 const CLOUD_CONFIG_KEY='tp_cloud_config';
+const GAS_SYNC_KEY='tp_gas_sync_config';
 function sanitizeTripId(value){
   return String(value||'local-default').trim().replace(/[^\w-]/g,'-').slice(0,48)||'local-default';
 }
@@ -1479,6 +1502,13 @@ let cloudUnsub=null;
 let cloudApi=null;
 let cloudApplying=false;
 let cloudSaveTimer=null;
+let gasSyncEnabled=params.get('sync')==='gas'||localStorage.getItem('tp_gas_enabled')==='1';
+let gasSyncConfig={url:'',actor:'',token:'',pollSec:6};
+let gasPollTimer=null;
+let gasSaveTimer=null;
+let gasApplying=false;
+let gasLastRemoteUpdatedAt='';
+let gasLastLocalSignature='';
 function canEdit(){return accessMode==='edit';}
 function requireEdit(action='修改行程'){
   if(canEdit())return true;
@@ -1489,7 +1519,7 @@ function recordActivity(action,detail={}){
   activityLog.unshift({
     id:'log_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
     time:new Date().toISOString(),
-    actor:localStorage.getItem('tp_actor_name')||'本機使用者',
+    actor:gasSyncConfig.actor||localStorage.getItem('tp_actor_name')||'本機使用者',
     action,
     detail
   });
@@ -1546,12 +1576,14 @@ function listTrips(){
   const store=readTripStore();
   return Object.values(store.trips||{}).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
 }
-function tripUrl(id=currentTripId,mode=accessMode,{cloud=cloudEnabled}={}){
+function tripUrl(id=currentTripId,mode=accessMode,{cloud=cloudEnabled,sync=gasSyncEnabled}={}){
   const url=new URL(location.href);
   url.searchParams.set('trip',id);
   url.searchParams.set('mode',mode);
   if(cloud)url.searchParams.set('cloud','1');
   else url.searchParams.delete('cloud');
+  if(sync)url.searchParams.set('sync','gas');
+  else url.searchParams.delete('sync');
   url.searchParams.delete('v');
   return url.toString();
 }
@@ -1561,6 +1593,8 @@ function replaceUrlForCurrentTrip(){
   url.searchParams.set('mode',accessMode);
   if(cloudEnabled)url.searchParams.set('cloud','1');
   else url.searchParams.delete('cloud');
+  if(gasSyncEnabled)url.searchParams.set('sync','gas');
+  else url.searchParams.delete('sync');
   history.replaceState(null,'',url.toString());
 }
 function copyText(text){
@@ -1581,7 +1615,7 @@ function updateAccessUI(){
   }
   if(lbl)lbl.textContent=canEdit()?'可編輯':'純檢視';
   const tripLbl=document.getElementById('trip-id-label');
-  if(tripLbl)tripLbl.textContent=`${cloudEnabled?'雲端':'本機'}：${currentTripId}`;
+  if(tripLbl)tripLbl.textContent=`${gasSyncEnabled?'Google JSON':cloudEnabled?'雲端':'本機'}：${currentTripId}`;
 }
 function toggleAccessMode(){
   const next=canEdit()?'view':'edit';
@@ -1615,6 +1649,7 @@ function saveLocal(){
     writeTripStore(store);
     localStorage.setItem('tp_v5',JSON.stringify({days,activeDay,orsApiKey,useApiKey}));
     if(cloudEnabled&&canEdit()&&!cloudApplying)scheduleCloudSave();
+    if(gasSyncEnabled&&canEdit()&&!gasApplying)scheduleGasSave();
   }catch(e){}
 }
 function loadLocal(){
@@ -1645,6 +1680,7 @@ function renderTripModal(){
   document.getElementById('trip-view-url').textContent=viewUrl;
   const cloudRaw=localStorage.getItem(CLOUD_CONFIG_KEY)||'';
   document.getElementById('cloud-config-input').value=cloudRaw;
+  hydrateGasInputs();
   const list=document.getElementById('trip-list');
   const trips=listTrips();
   list.innerHTML=trips.length?'':'<div class="cloud-status">尚未建立其他旅程。</div>';
@@ -1669,6 +1705,7 @@ function renderTripModal(){
     row.querySelector('[data-action="delete"]').onclick=()=>deleteTrip(trip.id);
     list.appendChild(row);
   });
+  updateGasStatus();
   updateCloudStatus();
 }
 function openTripModal(){
@@ -1695,6 +1732,7 @@ function saveTripMeta(){
   renderSidebar();
   renderTripModal();
   if(cloudEnabled)initCloudSync();
+  if(gasSyncEnabled){startGasPolling();saveGasTrip({silent:true});}
   showToast('旅程設定已儲存');
 }
 function createNewTrip(){
@@ -1711,6 +1749,7 @@ function createNewTrip(){
   renderMarkers();
   renderTripModal();
   if(cloudEnabled)initCloudSync();
+  if(gasSyncEnabled){startGasPolling();saveGasTrip({silent:true});}
 }
 function switchTrip(id){
   const store=readTripStore();
@@ -1722,6 +1761,7 @@ function switchTrip(id){
   replaceUrlForCurrentTrip();
   renderTripModal();
   if(cloudEnabled)initCloudSync();
+  if(gasSyncEnabled){startGasPolling();loadGasTrip({silent:true});}
 }
 function deleteTrip(id){
   if(!requireEdit('刪除旅程'))return;
@@ -1733,6 +1773,165 @@ function deleteTrip(id){
   delete store.trips[id];
   writeTripStore(store);
   renderTripModal();
+}
+function readGasConfig(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(GAS_SYNC_KEY)||'{}');
+    return {
+      url:String(saved.url||'').trim(),
+      actor:String(saved.actor||localStorage.getItem('tp_actor_name')||'').trim(),
+      token:String(saved.token||'').trim(),
+      pollSec:Math.max(4,Number(saved.pollSec)||6)
+    };
+  }catch(e){
+    return {url:'',actor:'',token:'',pollSec:6};
+  }
+}
+function writeGasConfig(config){
+  gasSyncConfig={...readGasConfig(),...config};
+  localStorage.setItem(GAS_SYNC_KEY,JSON.stringify(gasSyncConfig));
+  if(gasSyncConfig.actor)localStorage.setItem('tp_actor_name',gasSyncConfig.actor);
+}
+function hydrateGasInputs(){
+  gasSyncConfig=readGasConfig();
+  const url=document.getElementById('gas-url-input');
+  const actor=document.getElementById('gas-actor-input');
+  const token=document.getElementById('gas-token-input');
+  if(url)url.value=gasSyncConfig.url||'';
+  if(actor)actor.value=gasSyncConfig.actor||'';
+  if(token)token.value=gasSyncConfig.token||'';
+}
+function collectGasInputs(){
+  const config={
+    url:document.getElementById('gas-url-input')?.value.trim()||'',
+    actor:document.getElementById('gas-actor-input')?.value.trim()||'',
+    token:document.getElementById('gas-token-input')?.value.trim()||'',
+    pollSec:6
+  };
+  writeGasConfig(config);
+  return gasSyncConfig;
+}
+function setGasStatus(text,type=''){
+  const el=document.getElementById('gas-status');
+  if(!el)return;
+  el.textContent=text;
+  el.className=`cloud-status ${type}`.trim();
+}
+function updateGasStatus(){
+  if(!gasSyncEnabled){
+    setGasStatus('尚未啟用。適合先 2 人共編；純檢視連結可讀取，本機編輯需有 token。');
+    return;
+  }
+  const who=gasSyncConfig.actor||'匿名旅伴';
+  const last=gasLastRemoteUpdatedAt?`，遠端更新：${new Date(gasLastRemoteUpdatedAt).toLocaleString('zh-TW')}`:'';
+  setGasStatus(`Google JSON 同步中：${currentTripId}（${who}）${last}`,'ok');
+}
+function buildGasEndpoint(action){
+  const url=new URL(gasSyncConfig.url);
+  url.searchParams.set('action',action);
+  url.searchParams.set('tripId',currentTripId);
+  return url.toString();
+}
+async function parseGasResponse(res){
+  const text=await res.text();
+  let data=null;
+  try{data=JSON.parse(text);}
+  catch(e){throw new Error(`回應不是 JSON：${text.slice(0,120)}`);}
+  if(!res.ok||data.ok===false)throw new Error(data.error||`HTTP ${res.status}`);
+  return data;
+}
+function gasStateSignature(trip){
+  try{return JSON.stringify({title:trip.title,data:trip.data,activityLog:trip.activityLog});}
+  catch(e){return '';}
+}
+function scheduleGasSave(){
+  if(!gasSyncEnabled||gasApplying||!canEdit())return;
+  clearTimeout(gasSaveTimer);
+  gasSaveTimer=setTimeout(()=>saveGasTrip({silent:true}),1200);
+}
+async function loadGasTrip({silent=false}={}){
+  if(!gasSyncConfig.url)return setGasStatus('請先填入 Apps Script Web App URL。','err');
+  try{
+    if(!silent)setGasStatus('正在載入 Google JSON 雲端行程…','sync');
+    const data=await parseGasResponse(await fetch(buildGasEndpoint('load'),{method:'GET',cache:'no-store'}));
+    const remote=data.trip;
+    if(!remote){
+      setGasStatus(canEdit()?'雲端尚未建立這個 tripId，按「儲存雲端」即可建立。':'雲端找不到這個旅程。',canEdit()?'sync':'err');
+      return null;
+    }
+    const remoteUpdated=remote.updatedAt||data.updatedAt||'';
+    const remoteSig=gasStateSignature(remote);
+    if(remoteUpdated&&remoteUpdated===gasLastRemoteUpdatedAt&&remoteSig===gasLastLocalSignature){
+      updateGasStatus();
+      return remote;
+    }
+    gasApplying=true;
+    applyTripState(remote,{persist:true,render:true});
+    gasApplying=false;
+    gasLastRemoteUpdatedAt=remoteUpdated;
+    gasLastLocalSignature=remoteSig;
+    updateGasStatus();
+    if(!silent)showToast('已載入雲端行程');
+    return remote;
+  }catch(e){
+    gasApplying=false;
+    const msg=/failed to fetch/i.test(e.message)?'無法連線 Apps Script。請確認使用 /exec 部署網址，且 Web App 權限設為「知道連結的任何人」。':e.message;
+    setGasStatus(`載入失敗：${msg}`,'err');
+    return null;
+  }
+}
+async function saveGasTrip({silent=false}={}){
+  if(!gasSyncConfig.url)return setGasStatus('請先填入 Apps Script Web App URL。','err');
+  if(!canEdit())return setGasStatus('目前是純檢視模式，不能寫入雲端。','err');
+  if(!gasSyncConfig.token)return setGasStatus('請設定編輯 Token，兩位共編者使用同一組即可。','err');
+  try{
+    if(!silent)setGasStatus('正在儲存到 Google JSON 雲端…','sync');
+    const payload=makeTripState();
+    payload.updatedBy=gasSyncConfig.actor||'匿名旅伴';
+    const body=new URLSearchParams();
+    body.set('action','save');
+    body.set('tripId',currentTripId);
+    body.set('token',gasSyncConfig.token);
+    body.set('actor',gasSyncConfig.actor||'匿名旅伴');
+    body.set('payload',JSON.stringify(payload));
+    const data=await parseGasResponse(await fetch(gasSyncConfig.url,{method:'POST',body}));
+    gasLastRemoteUpdatedAt=data.updatedAt||payload.updatedAt;
+    gasLastLocalSignature=gasStateSignature(payload);
+    updateGasStatus();
+    if(!silent)showToast('已儲存到雲端');
+    return data;
+  }catch(e){
+    const msg=/failed to fetch/i.test(e.message)?'無法連線 Apps Script。請確認使用 /exec 部署網址，且 Web App 權限設為「知道連結的任何人」。':e.message;
+    setGasStatus(`儲存失敗：${msg}`,'err');
+    return null;
+  }
+}
+function startGasPolling(){
+  clearInterval(gasPollTimer);
+  if(!gasSyncEnabled||!gasSyncConfig.url)return;
+  gasPollTimer=setInterval(()=>loadGasTrip({silent:true}),gasSyncConfig.pollSec*1000);
+}
+function enableGasSyncFromModal(){
+  collectGasInputs();
+  if(!gasSyncConfig.url){setGasStatus('請先填入 Apps Script Web App URL。','err');return;}
+  gasSyncEnabled=true;
+  localStorage.setItem('tp_gas_enabled','1');
+  replaceUrlForCurrentTrip();
+  updateAccessUI();
+  updateGasStatus();
+  startGasPolling();
+  loadGasTrip({silent:true}).then(remote=>{
+    if(!remote&&canEdit())saveGasTrip({silent:true});
+  });
+}
+function disableGasSync(){
+  clearInterval(gasPollTimer);
+  gasPollTimer=null;
+  gasSyncEnabled=false;
+  localStorage.setItem('tp_gas_enabled','0');
+  replaceUrlForCurrentTrip();
+  updateAccessUI();
+  updateGasStatus();
 }
 function getCloudConfig(){
   const raw=localStorage.getItem(CLOUD_CONFIG_KEY)||'';
@@ -3721,6 +3920,10 @@ document.getElementById('trip-save-btn').onclick=saveTripMeta;
 document.getElementById('trip-new-btn').onclick=createNewTrip;
 document.getElementById('copy-edit-url').onclick=()=>copyText(tripUrl(currentTripId,'edit'));
 document.getElementById('copy-view-url').onclick=()=>copyText(tripUrl(currentTripId,'view'));
+document.getElementById('gas-enable-btn').onclick=enableGasSyncFromModal;
+document.getElementById('gas-load-btn').onclick=()=>{collectGasInputs();loadGasTrip();};
+document.getElementById('gas-save-btn').onclick=()=>{collectGasInputs();saveGasTrip();};
+document.getElementById('gas-disable-btn').onclick=disableGasSync;
 document.getElementById('cloud-enable-btn').onclick=enableCloudFromModal;
 document.getElementById('cloud-disable-btn').onclick=disableCloud;
 document.getElementById('cloud-push-btn').onclick=()=>{if(!cloudEnabled)enableCloudFromModal();else pushCloudState();};
@@ -3800,6 +4003,7 @@ if(document.getElementById('json-input'))document.getElementById('json-input').a
 });
 
 /* ═══════════════ INIT ═══════════════ */
+gasSyncConfig=readGasConfig();
 loadLocal();
 updateAccessUI();
 updateKeyUI();
@@ -3824,6 +4028,12 @@ renderSidebar();renderMarkers();
 const allSpots=days.flatMap(d=>d.spots);
 if(allSpots.length)map.fitBounds(L.latLngBounds(allSpots.map(s=>[s.lat,s.lng])),{padding:[40,40]});
 applyUiMode();
+if(gasSyncEnabled){
+  updateGasStatus();
+  startGasPolling();
+  loadGasTrip({silent:true});
+}
+if(cloudEnabled)initCloudSync();
 </script>
 </body>
 </html>
