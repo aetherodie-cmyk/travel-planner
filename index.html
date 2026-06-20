@@ -1494,6 +1494,7 @@ const STORAGE_KEY='tp_v6_trips';
 const params=new URLSearchParams(location.search);
 const CLOUD_CONFIG_KEY='tp_cloud_config';
 const GAS_SYNC_KEY='tp_gas_sync_config';
+const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/';
 function sanitizeTripId(value){
   return String(value||'local-default').trim().replace(/[^\w-]/g,'-').slice(0,48)||'local-default';
 }
@@ -1583,8 +1584,12 @@ function listTrips(){
   const store=readTripStore();
   return Object.values(store.trips||{}).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
 }
+function shareBaseUrl(){
+  const isLocal=location.protocol==='file:'||['localhost','127.0.0.1',''].includes(location.hostname);
+  return isLocal?PUBLIC_APP_URL:location.href;
+}
 function tripUrl(id=currentTripId,mode=accessMode,{cloud=cloudEnabled,sync=gasSyncEnabled}={}){
-  const url=new URL(location.href);
+  const url=new URL(shareBaseUrl());
   url.searchParams.set('trip',id);
   url.searchParams.set('mode',mode);
   if(cloud)url.searchParams.set('cloud','1');
