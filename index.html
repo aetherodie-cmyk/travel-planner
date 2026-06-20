@@ -1582,8 +1582,13 @@ function tripUrl(id=currentTripId,mode=accessMode,{cloud=cloudEnabled,sync=gasSy
   url.searchParams.set('mode',mode);
   if(cloud)url.searchParams.set('cloud','1');
   else url.searchParams.delete('cloud');
-  if(sync)url.searchParams.set('sync','gas');
-  else url.searchParams.delete('sync');
+  if(sync){
+    url.searchParams.set('sync','gas');
+    if(gasSyncConfig.url)url.searchParams.set('gasUrl',gasSyncConfig.url);
+  }else{
+    url.searchParams.delete('sync');
+    url.searchParams.delete('gasUrl');
+  }
   url.searchParams.delete('v');
   return url.toString();
 }
@@ -1593,8 +1598,13 @@ function replaceUrlForCurrentTrip(){
   url.searchParams.set('mode',accessMode);
   if(cloudEnabled)url.searchParams.set('cloud','1');
   else url.searchParams.delete('cloud');
-  if(gasSyncEnabled)url.searchParams.set('sync','gas');
-  else url.searchParams.delete('sync');
+  if(gasSyncEnabled){
+    url.searchParams.set('sync','gas');
+    if(gasSyncConfig.url)url.searchParams.set('gasUrl',gasSyncConfig.url);
+  }else{
+    url.searchParams.delete('sync');
+    url.searchParams.delete('gasUrl');
+  }
   history.replaceState(null,'',url.toString());
 }
 function copyText(text){
@@ -1777,8 +1787,9 @@ function deleteTrip(id){
 function readGasConfig(){
   try{
     const saved=JSON.parse(localStorage.getItem(GAS_SYNC_KEY)||'{}');
+    const urlFromLink=params.get('gasUrl')||'';
     return {
-      url:String(saved.url||'').trim(),
+      url:String(urlFromLink||saved.url||'').trim(),
       actor:String(saved.actor||localStorage.getItem('tp_actor_name')||'').trim(),
       token:String(saved.token||'').trim(),
       pollSec:Math.max(4,Number(saved.pollSec)||6)
