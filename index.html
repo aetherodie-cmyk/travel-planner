@@ -778,6 +778,14 @@ body.view-only .empty-day small{display:none}
 .spot-item.drag-over{border-color:var(--primary);background:var(--primary-soft)}
 .spot-info{flex:1;min-width:0}
 .spot-kind{display:block;color:var(--primary);font-size:10px;font-weight:850;line-height:1;margin-bottom:5px}
+.spot-kind-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;min-width:0}
+.spot-kind-row .spot-kind{margin-bottom:0}
+.spot-category-tag{display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:6px;font-size:10px;font-weight:850;line-height:1;border:1px solid transparent;white-space:nowrap}
+.spot-category-tag.cat-lodging{color:#185FA5;background:#E6F1FB;border-color:#C8DDF2}
+.spot-category-tag.cat-spot{color:#25833B;background:#ECF6ED;border-color:#CDE8D2}
+.spot-category-tag.cat-shopping{color:#6047B1;background:#F0ECFF;border-color:#DCD4FF}
+.spot-category-tag.cat-food{color:#9A4D08;background:#FFF1DF;border-color:#F2D3A8}
+.spot-category-tag.cat-default{color:var(--muted);background:var(--surface-soft);border-color:var(--line-soft)}
 .spot-name{font-size:15px;font-weight:850;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
 .spot-meta{font-size:12px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .timeline-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px}
@@ -1286,6 +1294,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
       <div id="import-manual-new">
         <div class="spot-form-section-title"><i class="ti ti-edit"></i> 手動新增景點</div>
         <div class="spot-form-grid">
+          <div class="spot-form-field"><label>分類</label><select class="import-day-sel" id="import-category"></select></div>
           <div class="spot-form-field"><label>景點名稱</label><input id="import-name" placeholder="例：十和田湖"/></div>
           <div class="spot-form-field"><label>地址</label><input id="import-addr" placeholder="例：青森縣十和田市"/></div>
           <div class="spot-form-field"><label>緯度</label><input id="import-lat" inputmode="decimal" placeholder="例：40.468"/></div>
@@ -1383,6 +1392,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         </div>
         <div class="spot-form-section-title"><i class="ti ti-map-pin"></i> 景點資料</div>
         <div class="spot-form-grid">
+          <div class="spot-form-field"><label>分類</label><select class="import-day-sel" id="note-category" style="height:38px"></select></div>
           <div class="spot-form-field"><label>景點名稱</label><input id="note-name" placeholder="例：十和田湖"/></div>
           <div class="spot-form-field"><label>地址</label><input id="note-addr" placeholder="例：青森縣十和田市"/></div>
           <div class="spot-form-field"><label>緯度</label><input id="note-lat" inputmode="decimal" placeholder="例：40.468"/></div>
@@ -2747,7 +2757,7 @@ function renderSpotList(){
       <div class="spot-body-wrap">
         <div class="spot-item" draggable="${canEdit()?'true':'false'}" data-idx="${i}">
           <div class="spot-info">
-            <div class="spot-kind">景點</div>
+            <div class="spot-kind-row"><div class="spot-kind">景點</div>${spotCategoryHtml(spot)}</div>
             <div class="spot-name">${spot.name}</div>
             <div class="spot-meta">${spot.addr||'自訂位置'}</div>
             ${timelineHtml(spot,i,spots)}
@@ -2811,7 +2821,7 @@ function renderMobileSpotList(){
       <div class="spot-body-wrap">
         <div class="spot-item" data-idx="${i}">
           <div class="spot-info">
-            <div class="spot-kind">景點</div>
+            <div class="spot-kind-row"><div class="spot-kind">景點</div>${spotCategoryHtml(spot)}</div>
             <div class="spot-name">${spot.name}</div>
             <div class="spot-meta">${spot.addr||'自訂位置'}</div>
             ${timelineHtml(spot,i,spots)}
@@ -3303,6 +3313,36 @@ const NOTE_FIELDS=[
   {k:'website',l:'官網'},
   {k:'memo',l:'備註'}
 ];
+const SPOT_CATEGORIES=[
+  {v:'spot',l:'景點',cls:'cat-spot'},
+  {v:'lodging',l:'住宿',cls:'cat-lodging'},
+  {v:'food',l:'美食',cls:'cat-food'},
+  {v:'shopping',l:'購物',cls:'cat-shopping'}
+];
+function normalizeSpotCategory(value){
+  const raw=String(value||'').trim().toLowerCase();
+  if(!raw)return 'spot';
+  const compact=raw.replace(/[\s_-]/g,'');
+  if(['lodging','hotel','stay','accommodation','住宿','飯店','酒店','旅館','旅宿','民宿'].includes(compact))return 'lodging';
+  if(['food','restaurant','eat','dining','cafe','café','meal','美食','餐廳','咖啡','小吃','吃飯'].includes(compact))return 'food';
+  if(['shopping','shop','mall','store','market','購物','商場','商店','市場','伴手禮'].includes(compact))return 'shopping';
+  if(['spot','sight','sightseeing','attraction','place','tourism','景點','觀光','地點'].includes(compact))return 'spot';
+  return 'spot';
+}
+function getSpotCategoryMeta(spot){
+  const val=normalizeSpotCategory(spot?.category);
+  return SPOT_CATEGORIES.find(c=>c.v===val)||SPOT_CATEGORIES[0];
+}
+function spotCategoryHtml(spot){
+  const cat=getSpotCategoryMeta(spot);
+  return `<span class="spot-category-tag ${cat.cls}">${cat.l}</span>`;
+}
+function populateCategorySelect(id,value='spot'){
+  const sel=document.getElementById(id);
+  if(!sel)return;
+  const current=normalizeSpotCategory(value);
+  sel.innerHTML=SPOT_CATEGORIES.map(c=>`<option value="${c.v}"${c.v===current?' selected':''}>${c.l}</option>`).join('');
+}
 function hasSpotNotes(spot){
   const n=spot?.notes||{};
   return NOTE_FIELDS.some(f=>String(n[f.k]||'').trim());
@@ -3376,6 +3416,7 @@ function resetEditorJsonPanel(){
 function loadNoteInputs(spot){
   const loc=findSpotPosition(spot);
   populateNoteDaySelect(loc.di);
+  populateCategorySelect('note-category',spot.category);
   const n=spot.notes||{};
   document.getElementById('note-name').value=spot.name||'';
   document.getElementById('note-addr').value=spot.addr||'';
@@ -3390,6 +3431,7 @@ function loadNoteInputs(spot){
 }
 function clearNoteInputs(selectedIdx=activeDay){
   populateNoteDaySelect(selectedIdx);
+  populateCategorySelect('note-category','spot');
   ['name','addr','lat','lng','hours','fee','phone','website','memo'].forEach(k=>setFieldValue(`note-${k}`,''));
   resetEditorJsonPanel();
 }
@@ -3520,6 +3562,7 @@ async function saveNotes(){
       return;
     }
     if(!pendingInfoSpot)return;
+    pendingInfoSpot.category=normalized.category||'spot';
     pendingInfoSpot.name=normalized.name;
     pendingInfoSpot.addr=normalized.addr;
     pendingInfoSpot.lat=normalized.lat;
@@ -3558,6 +3601,7 @@ const JSON_FIELD_MAP=[
   {keys:['remarks','memo','note','notes','description','comment','備註','說明','注意事項'], field:'note-memo', note:'memo', label:'備註'},
 ];
 const SPOT_FIELD_MAP=[
+  {keys:['category','tag','type','kind','分類','類型','標籤'], prop:'category', label:'分類'},
   {keys:['name','title','place_name','placeName','spot_name','spotName','景點名稱','名稱'], prop:'name', label:'景點名稱'},
   {keys:['address','addr','formatted_address','formattedAddress','location.address','地址'], prop:'addr', label:'地址'},
   {keys:['lat','latitude','緯度'], prop:'lat', label:'緯度'},
@@ -3610,7 +3654,12 @@ function setFieldValue(id,val){
 }
 function applySpotDataToForm(data,prefix){
   const filled=[];
-  const labels={name:'景點名稱',addr:'地址',lat:'緯度',lng:'經度',hours:'營業時間',fee:'門票費用',phone:'電話',website:'官網',memo:'備註'};
+  const labels={category:'分類',name:'景點名稱',addr:'地址',lat:'緯度',lng:'經度',hours:'營業時間',fee:'門票費用',phone:'電話',website:'官網',memo:'備註'};
+  if(data.category!==undefined){
+    const sel=document.getElementById(`${prefix}-category`);
+    if(sel)sel.value=normalizeSpotCategory(data.category);
+    filled.push(labels.category);
+  }
   ['name','addr','lat','lng'].forEach(k=>{
     if(data[k]!==undefined){setFieldValue(`${prefix}-${k}`,data[k]);filled.push(labels[k]);}
   });
@@ -3632,6 +3681,7 @@ function readSpotDataFromForm(prefix){
     memo:value('memo')
   };
   return {
+    category:normalizeSpotCategory(value('category')),
     name:value('name'),
     addr:value('addr'),
     lat:value('lat'),
@@ -3715,6 +3765,7 @@ function exportJSON(){
       name:d.name,
       spots:d.spots.map(s=>({
         id:s.id, name:s.name, addr:s.addr||'',
+        category:normalizeSpotCategory(s.category),
         lat:s.lat, lng:s.lng,
         osmType:s.osmType||null, osmId:s.osmId||null,
         notes:s.notes||null,
@@ -3775,6 +3826,7 @@ function applyLoadedData(payload, sourceName){
       id:s.id||('imp_'+Math.random().toString(36).slice(2)),
       name:s.name||'未命名景點',
       addr:s.addr||'',
+      category:normalizeSpotCategory(s.category),
       lat:parseFloat(s.lat), lng:parseFloat(s.lng),
       osmType:s.osmType||null, osmId:s.osmId||null,
       notes:s.notes||null,
@@ -3961,6 +4013,7 @@ async function geocodeAddress(address){
   return{lat:parseFloat(data[0].lat),lng:parseFloat(data[0].lon)};
 }
 function clearImportFields(){
+  populateCategorySelect('import-category','spot');
   ['name','addr','lat','lng','hours','fee','phone','website','memo'].forEach(k=>setFieldValue(`import-${k}`,''));
 }
 function fillImportFieldsFromJson(){
@@ -3981,6 +4034,7 @@ function fillImportFieldsFromJson(){
 }
 function applySpotDataToExistingSpot(spot,data){
   if(!canEdit())return;
+  if(data.category!==undefined)spot.category=normalizeSpotCategory(data.category);
   if(data.name)spot.name=data.name;
   if(data.addr!==undefined)spot.addr=data.addr;
   const lat=parseFloat(data.lat),lng=parseFloat(data.lng);
@@ -4000,6 +4054,7 @@ async function buildSpotFromData(data,resultEl){
   if(!Number.isFinite(latNum)||!Number.isFinite(lngNum))throw new Error(`${name}：缺少有效座標或可查詢地址`);
   const spot={
     id:'imp_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    category:normalizeSpotCategory(data.category),
     name,
     addr:addr||`${latNum.toFixed(5)}, ${lngNum.toFixed(5)}`,
     lat:latNum,lng:lngNum,
@@ -4035,8 +4090,8 @@ async function doImport(){
     applySpotDataToExistingSpot(spot,data);
     recordActivity('update_spot',{day:days[spotInfo.di]?.name,spot:spot.name,source:'import_json'});
     saveLocal();renderSidebar();renderMarkers();
-    const labels={name:'景點名稱',addr:'地址',lat:'緯度',lng:'經度',hours:'營業時間',fee:'門票',phone:'電話',website:'官網',memo:'備註'};
-    const filled=[...['name','addr','lat','lng'].filter(k=>data[k]!==undefined).map(k=>labels[k]),...Object.keys(data.notes||{}).map(k=>labels[k])];
+    const labels={category:'分類',name:'景點名稱',addr:'地址',lat:'緯度',lng:'經度',hours:'營業時間',fee:'門票',phone:'電話',website:'官網',memo:'備註'};
+    const filled=[...['category','name','addr','lat','lng'].filter(k=>data[k]!==undefined).map(k=>labels[k]),...Object.keys(data.notes||{}).map(k=>labels[k])];
     resultEl.className='ok';resultEl.textContent=`✓ 已補充到「${spot.name}」：${filled.join('、')}`;
     return;
   }
