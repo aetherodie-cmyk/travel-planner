@@ -703,6 +703,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .toggle.on::after{left:16px}
 .key-badge{font-size:11px;padding:3px 9px;border-radius:7px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:var(--surface-soft);color:var(--muted);display:flex;align-items:center;gap:4px}
 .key-badge.has-key{background:var(--primary-soft);color:var(--primary-strong);border-color:var(--primary)}
+.access-badge{font-size:11px;padding:3px 9px;border-radius:7px;font-weight:700;cursor:pointer;border:1px solid var(--line);background:var(--surface-soft);color:var(--muted);display:flex;align-items:center;gap:4px;white-space:nowrap}
+.access-badge.edit{background:var(--primary-soft);color:var(--primary-strong);border-color:var(--primary)}
+.access-badge.view{background:#F7F8F9;color:#5F6368;border-color:#D8DADC}
+.trip-id-badge{font-size:10px;font-weight:700;color:var(--muted);background:var(--surface-soft);border:1px solid var(--line-soft);border-radius:6px;padding:2px 7px;white-space:nowrap}
+body.view-only .edit-only,
+body.view-only #search-bar,
+body.view-only .mobile-search-wrap,
+body.view-only #import-btn,
+body.view-only #calc-all-btn,
+body.view-only #mobile-import-btn,
+body.view-only #mobile-calc-all-btn,
+body.view-only #api-toggle-wrap,
+body.view-only #api-key-btn,
+body.view-only #mobile-load-json,
+body.view-only #mobile-api-key,
+body.view-only .spot-btn.move,
+body.view-only .spot-btn.del,
+body.view-only .timeline-edit-btn,
+body.view-only .seg-actions,
+body.view-only .seg-mode-btns,
+body.view-only .day-tab-del,
+body.view-only .day-tab.add-day{display:none!important}
+body.view-only .spot-item,
+body.view-only .day-tab,
+body.view-only .day-tab.active{cursor:pointer}
+body.view-only .empty-day small{display:none}
 /* layout */
 #app{display:flex;flex:1;overflow:hidden}
 #sidebar{width:340px;min-width:340px;display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--line);overflow:hidden}
@@ -1084,7 +1110,9 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
 <div id="titlebar">
   <i class="ti ti-map-2 logo"></i> 旅遊行程規劃
   <span class="sub">每段路程可單獨設定交通方式</span>
+  <span class="trip-id-badge" id="trip-id-label">本機旅程</span>
   <div id="titlebar-right">
+    <button class="access-badge" id="access-mode-btn" title="切換純檢視 / 可編輯模式"><i class="ti ti-lock-open"></i> <span id="access-mode-label">可編輯</span></button>
     <button class="ui-mode-btn" id="ui-mode-btn" title="切換自動、桌面或手機版面"><i class="ti ti-devices"></i> <span id="ui-mode-label">版面：自動</span></button>
     <div class="toggle-wrap" id="api-toggle-wrap" title="切換是否使用 ORS API Key 計算路線">
       <div class="toggle" id="api-toggle"></div>
@@ -1348,6 +1376,61 @@ let expandedSegmentIds=new Set();
 const MOBILE_SHEET_STATES=['peek','half','full'];
 const MOBILE_SHEET_LABELS={peek:'景點日切換',half:'行程清單',full:'聚焦清單'};
 const UI_MODE_LABELS={auto:'版面：自動',desktop:'版面：桌面',mobile:'版面：手機'};
+const STORAGE_KEY='tp_v6_trips';
+const params=new URLSearchParams(location.search);
+function sanitizeTripId(value){
+  return String(value||'local-default').trim().replace(/[^\w-]/g,'-').slice(0,48)||'local-default';
+}
+let currentTripId=sanitizeTripId(params.get('trip')||localStorage.getItem('tp_active_trip_id')||'local-default');
+let currentTripTitle='旅遊行程規劃';
+let activityLog=[];
+let accessMode=params.get('mode')==='view'?'view':'edit';
+function canEdit(){return accessMode==='edit';}
+function requireEdit(action='修改行程'){
+  if(canEdit())return true;
+  showToast(`目前是純檢視模式，無法${action}`);
+  return false;
+}
+function recordActivity(action,detail={}){
+  activityLog.unshift({
+    id:'log_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    time:new Date().toISOString(),
+    actor:localStorage.getItem('tp_actor_name')||'本機使用者',
+    action,
+    detail
+  });
+  activityLog=activityLog.slice(0,100);
+}
+function makeTripState(){
+  return {
+    id:currentTripId,
+    title:currentTripTitle,
+    updatedAt:new Date().toISOString(),
+    data:{days,activeDay,orsApiKey,useApiKey},
+    activityLog
+  };
+}
+function updateAccessUI(){
+  document.body.classList.toggle('view-only',!canEdit());
+  document.body.classList.toggle('edit-mode',canEdit());
+  const btn=document.getElementById('access-mode-btn');
+  const lbl=document.getElementById('access-mode-label');
+  if(btn){
+    btn.classList.toggle('edit',canEdit());
+    btn.classList.toggle('view',!canEdit());
+    btn.querySelector('i').className=canEdit()?'ti ti-lock-open':'ti ti-eye';
+  }
+  if(lbl)lbl.textContent=canEdit()?'可編輯':'純檢視';
+  const tripLbl=document.getElementById('trip-id-label');
+  if(tripLbl)tripLbl.textContent=currentTripId==='local-default'?'本機旅程':`旅程：${currentTripId}`;
+}
+function toggleAccessMode(){
+  const next=canEdit()?'view':'edit';
+  const nextParams=new URLSearchParams(location.search);
+  nextParams.set('mode',next);
+  if(currentTripId!=='local-default')nextParams.set('trip',currentTripId);
+  location.search=nextParams.toString();
+}
 
 /* ═══════════════ TOAST ═══════════════ */
 let toastTimer=null;
@@ -1361,16 +1444,41 @@ function showToast(msg,duration=2800){
 
 /* ═══════════════ PERSIST ═══════════════ */
 function saveLocal(){
-  try{localStorage.setItem('tp_v5',JSON.stringify({days,activeDay,orsApiKey,useApiKey}));}catch(e){}
+  try{
+    localStorage.setItem('tp_active_trip_id',currentTripId);
+    const store=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{"_version":3,"trips":{}}');
+    store._version=3;
+    store.activeTripId=currentTripId;
+    store.trips=store.trips||{};
+    store.trips[currentTripId]=makeTripState();
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(store));
+    localStorage.setItem('tp_v5',JSON.stringify({days,activeDay,orsApiKey,useApiKey}));
+  }catch(e){}
 }
 function loadLocal(){
   try{
-    // try v5 first, fallback to v4
+    const storeRaw=localStorage.getItem(STORAGE_KEY);
+    if(storeRaw){
+      const store=JSON.parse(storeRaw);
+      const trip=store.trips?.[currentTripId]||store.trips?.[store.activeTripId];
+      if(trip){
+        currentTripId=trip.id||currentTripId;
+        currentTripTitle=trip.title||currentTripTitle;
+        const d=trip.data||trip;
+        days=d.days||days; activeDay=d.activeDay||0;
+        orsApiKey=d.orsApiKey||''; useApiKey=!!d.useApiKey;
+        activityLog=Array.isArray(trip.activityLog)?trip.activityLog:[];
+        return;
+      }
+    }
     const raw=localStorage.getItem('tp_v5')||localStorage.getItem('tp_v4');
-    if(!raw)return;
-    const d=JSON.parse(raw);
-    days=d.days||days; activeDay=d.activeDay||0;
-    orsApiKey=d.orsApiKey||''; useApiKey=!!d.useApiKey;
+    if(raw){
+      const d=JSON.parse(raw);
+      days=d.days||days; activeDay=d.activeDay||0;
+      orsApiKey=d.orsApiKey||''; useApiKey=!!d.useApiKey;
+      activityLog=[];
+      saveLocal();
+    }
   }catch(e){}
 }
 
@@ -1421,6 +1529,7 @@ function renderMarkers(){
 
 /* ═══════════════ SIDEBAR ═══════════════ */
 function renderSidebar(){
+  updateAccessUI();
   renderTabs();
   renderSpotList();
   renderMobileTabs();
@@ -1435,44 +1544,48 @@ function renderTabs(){
   days.forEach((d,i)=>{
     const t=document.createElement('div');
     t.className='day-tab'+(i===activeDay?' active':'');
-    t.draggable=true;
+    t.draggable=canEdit();
     t.dataset.tabIdx=i;
     t.innerHTML=`<span>${d.name}</span><span class="day-tab-del" title="刪除此天" data-delidx="${i}">×</span>`;
-    t.querySelector('span:first-child').ondblclick=()=>renameDay(i);
+    t.querySelector('span:first-child').ondblclick=()=>{if(canEdit())renameDay(i);};
     t.onclick=e=>{if(e.target.classList.contains('day-tab-del'))return;activeDay=i;renderSidebar();clearRouteLayers();};
     // tab drag-to-reorder
-    t.addEventListener('dragstart',e=>{tabDragSrc=i;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','tab');});
-    t.addEventListener('dragend',()=>{tabDragSrc=null;document.querySelectorAll('.day-tab').forEach(x=>x.classList.remove('tab-drag-over-left','tab-drag-over-right'));});
-    t.addEventListener('dragover',e=>{
-      if(tabDragSrc===null||e.dataTransfer.types[0]!=='text/plain')return;
-      e.preventDefault();
-      const rect=t.getBoundingClientRect();
-      const mid=rect.left+rect.width/2;
-      t.classList.remove('tab-drag-over-left','tab-drag-over-right');
-      t.classList.add(e.clientX<mid?'tab-drag-over-left':'tab-drag-over-right');
-    });
-    t.addEventListener('dragleave',()=>t.classList.remove('tab-drag-over-left','tab-drag-over-right'));
-    t.addEventListener('drop',e=>{
-      e.preventDefault();
-      if(tabDragSrc===null||tabDragSrc===i)return;
-      const rect=t.getBoundingClientRect();
-      const mid=rect.left+rect.width/2;
-      let insertAt=e.clientX<mid?i:i+1;
-      if(tabDragSrc<insertAt)insertAt--;
-      const moved=days.splice(tabDragSrc,1)[0];
-      days.splice(insertAt,0,moved);
-      activeDay=insertAt;
-      tabDragSrc=null;
-      renderSidebar();renderMarkers();clearRouteLayers();
-    });
-    t.querySelector('.day-tab-del').onclick=e=>{e.stopPropagation();deleteDay(i);};
+    if(canEdit()){
+      t.addEventListener('dragstart',e=>{tabDragSrc=i;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','tab');});
+      t.addEventListener('dragend',()=>{tabDragSrc=null;document.querySelectorAll('.day-tab').forEach(x=>x.classList.remove('tab-drag-over-left','tab-drag-over-right'));});
+      t.addEventListener('dragover',e=>{
+        if(tabDragSrc===null||e.dataTransfer.types[0]!=='text/plain')return;
+        e.preventDefault();
+        const rect=t.getBoundingClientRect();
+        const mid=rect.left+rect.width/2;
+        t.classList.remove('tab-drag-over-left','tab-drag-over-right');
+        t.classList.add(e.clientX<mid?'tab-drag-over-left':'tab-drag-over-right');
+      });
+      t.addEventListener('dragleave',()=>t.classList.remove('tab-drag-over-left','tab-drag-over-right'));
+      t.addEventListener('drop',e=>{
+        e.preventDefault();
+        if(tabDragSrc===null||tabDragSrc===i)return;
+        const rect=t.getBoundingClientRect();
+        const mid=rect.left+rect.width/2;
+        let insertAt=e.clientX<mid?i:i+1;
+        if(tabDragSrc<insertAt)insertAt--;
+        const moved=days.splice(tabDragSrc,1)[0];
+        days.splice(insertAt,0,moved);
+        activeDay=insertAt;
+        tabDragSrc=null;
+        recordActivity('reorder_day',{day:moved.name,to:insertAt});
+        saveLocal();
+        renderSidebar();renderMarkers();clearRouteLayers();
+      });
+      t.querySelector('.day-tab-del').onclick=e=>{e.stopPropagation();deleteDay(i);};
+    }
     el.appendChild(t);
   });
   const add=document.createElement('div');
   add.className='day-tab add-day';
   add.innerHTML='<i class="ti ti-plus"></i>';
   add.title='新增天數';
-  add.onclick=addDay;
+  add.onclick=()=>{if(canEdit())addDay();};
   el.appendChild(add);
 }
 
@@ -1484,16 +1597,16 @@ function renderMobileTabs(){
     const t=document.createElement('div');
     t.className='day-tab'+(i===activeDay?' active':'');
     t.innerHTML=`<span>${d.name}</span><span class="day-tab-del" title="刪除此天" data-delidx="${i}">×</span>`;
-    t.querySelector('span:first-child').ondblclick=()=>renameDay(i);
+    t.querySelector('span:first-child').ondblclick=()=>{if(canEdit())renameDay(i);};
     t.onclick=e=>{if(e.target.classList.contains('day-tab-del'))return;activeDay=i;renderSidebar();clearRouteLayers();};
-    t.querySelector('.day-tab-del').onclick=e=>{e.stopPropagation();deleteDay(i);};
+    if(canEdit())t.querySelector('.day-tab-del').onclick=e=>{e.stopPropagation();deleteDay(i);};
     el.appendChild(t);
   });
   const add=document.createElement('div');
   add.className='day-tab add-day';
   add.innerHTML='<i class="ti ti-plus"></i>';
   add.title='新增天數';
-  add.onclick=addDay;
+  add.onclick=()=>{if(canEdit())addDay();};
   el.appendChild(add);
 }
 
@@ -1598,6 +1711,7 @@ function timelineHtml(spot,i,spots){
   </div>`;
 }
 function attachTimelineHandlers(root,i){
+  if(!canEdit())return;
   const box=root.querySelector('.timeline-box');
   const row=root.querySelector('.timeline-row');
   if(!box||!row)return;
@@ -1822,6 +1936,7 @@ function renderSegmentConnector(spot,i){
   });
   conn.querySelectorAll('.seg-mode-btn').forEach(btn=>{
     btn.onclick=()=>{
+      if(!requireEdit('修改交通方式'))return;
       const old=spot.seg||{};
       spot.seg={mode:btn.dataset.mode,result:null};
       if(hasManualSegment(old))spot.seg.manualDurationMin=old.manualDurationMin;
@@ -1833,6 +1948,7 @@ function renderSegmentConnector(spot,i){
   });
   conn.querySelector('.seg-calc-btn').onclick=()=>calcSegment(i);
   conn.querySelector('.seg-manual-toggle').onclick=()=>{
+    if(!requireEdit('手動調整路段'))return;
     if(expandedSegmentIds.has(spot.id))expandedSegmentIds.delete(spot.id);
     else expandedSegmentIds.add(spot.id);
     renderSidebar();
@@ -1842,6 +1958,7 @@ function renderSegmentConnector(spot,i){
     renderSidebar();
   };
   conn.querySelector('.seg-manual-clear')?.addEventListener('click',()=>{
+    if(!requireEdit('清除手動路段'))return;
     delete spot.seg.manualDurationMin;
     delete spot.seg.manualDistanceKm;
     expandedSegmentIds.delete(spot.id);
@@ -1850,6 +1967,7 @@ function renderSegmentConnector(spot,i){
     saveLocal();
   });
   conn.querySelector('.seg-manual-save').onclick=()=>{
+    if(!requireEdit('套用手動路段'))return;
     const duration=cleanPositiveNumber(conn.querySelector('.seg-manual-duration')?.value);
     const distance=cleanPositiveNumber(conn.querySelector('.seg-manual-distance')?.value);
     if(duration===null){showToast('請輸入路段時間，例如 58 分鐘');return;}
@@ -1869,7 +1987,9 @@ function renderSpotList(){
   const el=document.getElementById('spot-list');
   const spots=days[activeDay].spots;
   if(!spots.length){
-    el.innerHTML=`<div class="empty-day"><i class="ti ti-map-search"></i>搜尋景點或直接點擊地圖新增<br><br><small style="color:#bbb">Tab 可拖拉換順序・雙擊重新命名</small></div>`;
+    el.innerHTML=canEdit()
+      ?`<div class="empty-day"><i class="ti ti-map-search"></i>搜尋景點或直接點擊地圖新增<br><br><small style="color:#bbb">Tab 可拖拉換順序・雙擊重新命名</small></div>`
+      :`<div class="empty-day"><i class="ti ti-eye"></i>這一天尚無景點</div>`;
     return;
   }
   el.innerHTML='';
@@ -1886,7 +2006,7 @@ function renderSpotList(){
         ${!isLast?'<div class="spot-vline"></div>':''}
       </div>
       <div class="spot-body-wrap">
-        <div class="spot-item" draggable="true" data-idx="${i}">
+        <div class="spot-item" draggable="${canEdit()?'true':'false'}" data-idx="${i}">
           <div class="spot-info">
             <div class="spot-kind">景點</div>
             <div class="spot-name">${spot.name}</div>
@@ -1902,13 +2022,15 @@ function renderSpotList(){
         </div>
       </div>`;
     const si=card.querySelector('.spot-item');
-    si.addEventListener('dragstart',e=>{if(e.dataTransfer.types[0]==='text/plain'&&tabDragSrc!==null)return;dragSrc=i;si.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('spot','1');});
-    si.addEventListener('dragend',()=>si.classList.remove('dragging'));
-    si.addEventListener('dragover',e=>{if(!e.dataTransfer.types.includes('spot'))return;e.preventDefault();si.classList.add('drag-over');});
-    si.addEventListener('dragleave',()=>si.classList.remove('drag-over'));
-    si.addEventListener('drop',e=>{e.preventDefault();si.classList.remove('drag-over');if(dragSrc!==null&&dragSrc!==i){reorderSpot(dragSrc,i);}dragSrc=null;});
-    card.querySelector('.spot-btn.del').onclick=()=>removeSpot(i);
-    card.querySelector('.spot-btn.move').onclick=()=>openMoveModal(i);
+    if(canEdit()){
+      si.addEventListener('dragstart',e=>{if(e.dataTransfer.types[0]==='text/plain'&&tabDragSrc!==null)return;dragSrc=i;si.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('spot','1');});
+      si.addEventListener('dragend',()=>si.classList.remove('dragging'));
+      si.addEventListener('dragover',e=>{if(!e.dataTransfer.types.includes('spot'))return;e.preventDefault();si.classList.add('drag-over');});
+      si.addEventListener('dragleave',()=>si.classList.remove('drag-over'));
+      si.addEventListener('drop',e=>{e.preventDefault();si.classList.remove('drag-over');if(dragSrc!==null&&dragSrc!==i){reorderSpot(dragSrc,i);}dragSrc=null;});
+      card.querySelector('.spot-btn.del').onclick=()=>removeSpot(i);
+      card.querySelector('.spot-btn.move').onclick=()=>openMoveModal(i);
+    }
     card.querySelector('.spot-btn.info-btn').onclick=()=>openInfoModal(spot.id);
     attachTimelineHandlers(card,i);
     si.addEventListener('mouseenter',()=>{const m=markers[spot.id];if(m)m.openPopup();});
@@ -1928,7 +2050,9 @@ function renderMobileSpotList(){
   recomputeTimeline(activeDay);
   const spots=days[activeDay].spots;
   if(!spots.length){
-    el.innerHTML=`<div class="empty-day"><i class="ti ti-map-search"></i>搜尋景點或直接點擊地圖新增</div>`;
+    el.innerHTML=canEdit()
+      ?`<div class="empty-day"><i class="ti ti-map-search"></i>搜尋景點或直接點擊地圖新增</div>`
+      :`<div class="empty-day"><i class="ti ti-eye"></i>這一天尚無景點</div>`;
     return;
   }
   el.innerHTML='';
@@ -1961,8 +2085,10 @@ function renderMobileSpotList(){
       </div>`;
     const si=card.querySelector('.spot-item');
     si.onclick=e=>{if(!e.target.closest('button')&&!e.target.closest('.timeline-box'))openInfoModal(spot.id);};
-    card.querySelector('.spot-btn.del').onclick=e=>{e.stopPropagation();removeSpot(i);};
-    card.querySelector('.spot-btn.move').onclick=e=>{e.stopPropagation();openMoveModal(i);};
+    if(canEdit()){
+      card.querySelector('.spot-btn.del').onclick=e=>{e.stopPropagation();removeSpot(i);};
+      card.querySelector('.spot-btn.move').onclick=e=>{e.stopPropagation();openMoveModal(i);};
+    }
     card.querySelector('.spot-btn.info-btn').onclick=e=>{e.stopPropagation();openInfoModal(spot.id);};
     attachTimelineHandlers(card,i);
     el.appendChild(card);
@@ -2029,49 +2155,81 @@ function cycleUiMode(){
 
 /* ═══════════════ DAY ACTIONS ═══════════════ */
 function addDay(){
+  if(!requireEdit('新增天數'))return;
   days.push({name:`第 ${days.length+1} 天`,spots:[]});
   activeDay=days.length-1;
+  recordActivity('add_day',{day:days[activeDay].name});
+  saveLocal();
   renderSidebar();renderMarkers();
 }
 function deleteDay(i){
+  if(!requireEdit('刪除天數'))return;
   if(days.length===1){alert('至少需要保留一天');return;}
   if(!confirm(`確定刪除「${days[i].name}」？`))return;
+  const removed=days[i]?.name;
   days.splice(i,1);
   if(activeDay>=days.length)activeDay=days.length-1;
+  recordActivity('delete_day',{day:removed});
+  saveLocal();
   renderSidebar();renderMarkers();clearRouteLayers();
 }
 function renameDay(i){
+  if(!requireEdit('重新命名天數'))return;
   const n=prompt('天數名稱：',days[i].name);
-  if(n&&n.trim()){days[i].name=n.trim();renderSidebar();}
+  if(n&&n.trim()){
+    const before=days[i].name;
+    days[i].name=n.trim();
+    recordActivity('rename_day',{before,after:days[i].name});
+    saveLocal();
+    renderSidebar();
+  }
 }
 
 /* ═══════════════ SPOT ACTIONS ═══════════════ */
 function addSpot(spot){
+  if(!requireEdit('新增景點'))return;
   days[activeDay].spots.push(spot);
+  recordActivity('add_spot',{day:days[activeDay]?.name,spot:spot.name});
+  saveLocal();
   renderSidebar();renderMarkers();clearRouteLayers();
 }
 function removeSpot(idx){
+  if(!requireEdit('移除景點'))return;
   const spots=days[activeDay].spots;
+  const removed=spots[idx]?.name;
   spots.splice(idx,1);
   if(spots[idx-1])delete spots[idx-1].seg;
+  recordActivity('remove_spot',{day:days[activeDay]?.name,spot:removed});
+  saveLocal();
   renderSidebar();renderMarkers();clearRouteLayers();
 }
 function removeSpotById(id){
+  if(!requireEdit('移除景點'))return;
   map.closePopup();
   days.forEach((d,di)=>{
     const idx=d.spots.findIndex(s=>s.id===id);
-    if(idx>-1){d.spots.splice(idx,1);if(di===activeDay)renderSidebar();}
+    if(idx>-1){
+      const removed=d.spots[idx]?.name;
+      d.spots.splice(idx,1);
+      recordActivity('remove_spot',{day:d.name,spot:removed});
+      if(di===activeDay)renderSidebar();
+    }
   });
+  saveLocal();
   renderMarkers();clearRouteLayers();
 }
 function reorderSpot(from,to){
+  if(!requireEdit('調整景點順序'))return;
   const arr=days[activeDay].spots;
   const item=arr.splice(from,1)[0];
   arr.splice(to,0,item);
   arr.forEach(s=>delete s.seg);
+  recordActivity('reorder_spot',{day:days[activeDay]?.name,spot:item?.name,from,to});
+  saveLocal();
   renderSidebar();renderMarkers();clearRouteLayers();
 }
 function openMoveModal(idx){
+  if(!requireEdit('移動景點'))return;
   pendingMoveIdx=idx;
   const box=document.getElementById('move-modal-body');
   box.innerHTML='';
@@ -2089,18 +2247,23 @@ function openMoveModal(idx){
   document.getElementById('move-modal').classList.add('open');
 }
 function moveSpotToDay(di){
+  if(!requireEdit('移動景點'))return;
   const spot=days[activeDay].spots.splice(pendingMoveIdx,1)[0];
   delete spot.seg;
   days[di].spots.push(spot);
+  recordActivity('move_spot',{spot:spot?.name,to:days[di]?.name});
+  saveLocal();
   document.getElementById('move-modal').classList.remove('open');
   renderSidebar();renderMarkers();clearRouteLayers();
 }
 function onMapClick(e){
+  if(!canEdit())return;
   openSpotCreateModal({lat:e.latlng.lat.toFixed(6),lng:e.latlng.lng.toFixed(6)});
 }
 
 /* ═══════════════ SEARCH ═══════════════ */
 async function doSearch(inputId='search-input', resultsId='search-results'){
+  if(!requireEdit('搜尋新增景點'))return;
   const input=document.getElementById(inputId);
   const q=input.value.trim();
   if(!q)return;
@@ -2267,6 +2430,7 @@ async function fetchSegment(a,b,modeId){
 }
 
 async function calcSegment(i){
+  if(!requireEdit('計算路段'))return;
   const spots=days[activeDay].spots;
   const a=spots[i],b=spots[i+1];
   if(!a||!b)return;
@@ -2282,6 +2446,7 @@ async function calcSegment(i){
 }
 
 async function calcAllSegments(){
+  if(!requireEdit('計算路段'))return;
   const spots=days[activeDay].spots;
   if(spots.length<2){alert('請先加入至少 2 個景點');return;}
   for(let i=0;i<spots.length-1;i++){
@@ -2295,8 +2460,8 @@ async function showAllRoutes(){
   const spots=days[activeDay].spots;
   if(spots.length<2){alert('請先加入至少 2 個景點');return;}
   for(let i=0;i<spots.length-1;i++){
-    if(!spots[i].seg)spots[i].seg={mode:'foot-walking',result:null};
-    if(!hasManualSegment(spots[i].seg)&&(!spots[i].seg.result||spots[i].seg.result.error))await calcSegment(i);
+    if(!spots[i].seg&&canEdit())spots[i].seg={mode:'foot-walking',result:null};
+    if(canEdit()&&!hasManualSegment(spots[i].seg)&&(!spots[i].seg.result||spots[i].seg.result.error))await calcSegment(i);
   }
   const ri=document.getElementById('route-info');
   ri.style.display='block';
@@ -2328,7 +2493,7 @@ async function showAllRoutes(){
   ri.innerHTML=`<div class="ri-hd"><div class="ri-title">${days[activeDay].name} 路線總覽</div><button id="route-close" onclick="clearRouteLayers()">✕</button></div>
     ${segsHtml}
     <div class="ri-totals"><div class="ri-total-item"><div class="lbl">總距離</div><div class="val">${fmtDist(totalM)}</div></div><div class="ri-total-item"><div class="lbl">預估時間</div><div class="val">${fmtDur(totalSec)}</div></div></div>`;
-  saveLocal();
+  if(canEdit())saveLocal();
 }
 
 /* ═══════════════ INFO MODAL (Nominatim + Overpass) ═══════════════ */
@@ -2380,9 +2545,9 @@ function renderSpotInfoView(spot){
   const noteHtml=hasSpotNotes(spot)?notesSummaryHtml(spot,{standalone:true}):emptyNotesHtml();
   return `${externalSpotLinksHtml(spot)}
     ${noteHtml}
-    <div class="info-action-row">
+    ${canEdit()?`<div class="info-action-row">
       <button class="info-edit-btn" id="info-edit-note-btn" type="button"><i class="ti ti-pencil"></i> 編輯筆記</button>
-    </div>
+    </div>`:''}
     <div class="info-note">不自動查詢外部景點資料；Google 按鈕可手動開啟導航或搜尋。</div>`;
 }
 function setInfoMode(mode){
@@ -2436,6 +2601,7 @@ function setEditorSaveLabel(){
     :'<i class="ti ti-device-floppy"></i> 儲存到景點';
 }
 function openSpotEditModal(spot){
+  if(!requireEdit('編輯筆記'))return;
   pendingInfoSpot=spot;
   spotEditorMode='edit';
   document.getElementById('info-modal-title').textContent=`編輯：${spot.name}`;
@@ -2446,6 +2612,7 @@ function openSpotEditModal(spot){
   setInfoMode('edit');
 }
 function openSpotCreateModal(initialData={}){
+  if(!requireEdit('新增景點'))return;
   pendingInfoSpot=null;
   spotEditorMode='create';
   document.getElementById('info-modal-title').textContent='新增景點';
@@ -2521,10 +2688,12 @@ async function fetchSpotInfo(spot){
 }
 
 function switchInfoTab(pane){
+  if(pane==='notes'&&!requireEdit('編輯筆記'))return;
   setInfoMode(pane==='notes'?'edit':'view');
 }
 
 function moveExistingSpotToDay(spot,targetDayIdx){
+  if(!canEdit())return;
   const loc=findSpotPosition(spot);
   if(loc.si<0||loc.di===targetDayIdx)return;
   days[loc.di].spots.splice(loc.si,1);
@@ -2533,6 +2702,7 @@ function moveExistingSpotToDay(spot,targetDayIdx){
   days[targetDayIdx].spots.push(spot);
 }
 async function saveNotes(){
+  if(!requireEdit('儲存景點'))return;
   const data=readSpotDataFromForm('note');
   const targetDayIdx=parseInt(document.getElementById('note-day').value,10)||activeDay;
   if(!data.name){showToast('請輸入景點名稱');return;}
@@ -2542,6 +2712,7 @@ async function saveNotes(){
     if(spotEditorMode==='create'){
       days[targetDayIdx].spots.push(normalized);
       activeDay=targetDayIdx;
+      recordActivity('add_spot',{day:days[targetDayIdx]?.name,spot:normalized.name});
       saveLocal();
       renderSidebar();renderMarkers();clearRouteLayers();
       map.setView([normalized.lat,normalized.lng],14);
@@ -2558,6 +2729,7 @@ async function saveNotes(){
     moveExistingSpotToDay(pendingInfoSpot,targetDayIdx);
     activeDay=targetDayIdx;
     document.getElementById('info-modal-title').textContent=pendingInfoSpot.name;
+    recordActivity('update_spot',{day:days[targetDayIdx]?.name,spot:pendingInfoSpot.name});
     saveLocal();
     renderSidebar();
     renderMarkers();
@@ -2670,6 +2842,7 @@ function readSpotDataFromForm(prefix){
 }
 
 function parseJsonIntoNotes(){
+  if(!requireEdit('解析 JSON 到欄位'))return;
   const raw=document.getElementById('json-input').value.trim();
   const msg=document.getElementById('json-parse-msg');
   if(!raw){msg.style.color='#A32D2D';msg.textContent='請先貼入 JSON 內容';return;}
@@ -2729,10 +2902,16 @@ function fitBounds(){
 function exportJSON(){
   // Full export: preserves all notes, seg settings, results
   const payload={
-    _version:2,
+    _version:3,
     _saved:new Date().toISOString(),
     _app:'travel-planner',
+    trip:{
+      id:currentTripId,
+      title:currentTripTitle,
+      role:accessMode
+    },
     activeDay,
+    activityLog,
     days:days.map(d=>({
       name:d.name,
       spots:d.spots.map(s=>({
@@ -2760,6 +2939,7 @@ function exportJSON(){
 }
 
 function loadJSONFile(){
+  if(!requireEdit('載入行程 JSON'))return;
   const input=document.createElement('input');
   input.type='file';input.accept='.json,application/json';
   input.onchange=async e=>{
@@ -2777,7 +2957,13 @@ function loadJSONFile(){
 }
 
 function applyLoadedData(payload, sourceName){
+  if(!requireEdit('載入行程 JSON'))return;
   // Support both v2 (full) and legacy export formats
+  if(!payload.days&&payload.data?.days){
+    payload={...payload.data, activityLog:payload.activityLog||[]};
+  }else if(!payload.days&&payload.trip?.data?.days){
+    payload={...payload.trip.data, activityLog:payload.trip.activityLog||[]};
+  }
   if(!payload.days||!Array.isArray(payload.days)){
     alert('格式不正確，找不到 days 陣列');return;
   }
@@ -2802,6 +2988,8 @@ function applyLoadedData(payload, sourceName){
     }))
   }));
   activeDay=Math.min(payload.activeDay||0, days.length-1);
+  if(Array.isArray(payload.activityLog))activityLog=payload.activityLog.slice(0,100);
+  recordActivity('load_trip_json',{source:sourceName,days:days.length,spots:days.reduce((s,d)=>s+d.spots.length,0)});
   saveLocal();
   renderSidebar();
   renderMarkers();
@@ -2919,6 +3107,7 @@ function showSummary(){
 let importMode='new'; // 'new' | 'info'
 
 function openImportModal(){
+  if(!requireEdit('匯入景點'))return;
   openSpotCreateModal();
   return;
   // populate day selector
@@ -2976,6 +3165,7 @@ function clearImportFields(){
   ['name','addr','lat','lng','hours','fee','phone','website','memo'].forEach(k=>setFieldValue(`import-${k}`,''));
 }
 function fillImportFieldsFromJson(){
+  if(!requireEdit('匯入 JSON'))return;
   const raw=document.getElementById('import-textarea').value.trim();
   const resultEl=document.getElementById('import-result');
   resultEl.className='';resultEl.textContent='';
@@ -2991,6 +3181,7 @@ function fillImportFieldsFromJson(){
   resultEl.textContent=`✓ 已填入欄位：${filled.join('、')}`;
 }
 function applySpotDataToExistingSpot(spot,data){
+  if(!canEdit())return;
   if(data.name)spot.name=data.name;
   if(data.addr!==undefined)spot.addr=data.addr;
   const lat=parseFloat(data.lat),lng=parseFloat(data.lng);
@@ -3020,6 +3211,7 @@ async function buildSpotFromData(data,resultEl){
 }
 
 async function doImport(){
+  if(!requireEdit('匯入景點'))return;
   const raw=document.getElementById('import-textarea').value.trim();
   const resultEl=document.getElementById('import-result');
   resultEl.className='';resultEl.textContent='';
@@ -3042,6 +3234,7 @@ async function doImport(){
     const data=extractSpotDataFromFlat(flat);
     if(!Object.keys(data).length){resultEl.className='err';resultEl.textContent='JSON 中找不到可對應的欄位';return;}
     applySpotDataToExistingSpot(spot,data);
+    recordActivity('update_spot',{day:days[spotInfo.di]?.name,spot:spot.name,source:'import_json'});
     saveLocal();renderSidebar();renderMarkers();
     const labels={name:'景點名稱',addr:'地址',lat:'緯度',lng:'經度',hours:'營業時間',fee:'門票',phone:'電話',website:'官網',memo:'備註'};
     const filled=[...['name','addr','lat','lng'].filter(k=>data[k]!==undefined).map(k=>labels[k]),...Object.keys(data.notes||{}).map(k=>labels[k])];
@@ -3085,6 +3278,8 @@ async function doImport(){
   resultEl.style.whiteSpace='pre-line';
   resultEl.textContent=msg;
   if(added.length){
+    recordActivity('import_spots',{day:days[dayIdx]?.name,count:added.length,spots:added});
+    saveLocal();
     setTimeout(()=>document.getElementById('import-modal').classList.remove('open'),1800);
   }
 }
@@ -3137,12 +3332,14 @@ document.getElementById('mobile-import-btn').onclick=openImportModal;
 document.getElementById('mobile-summary-btn').onclick=showSummary;
 document.getElementById('mobile-sheet-handle').onclick=cycleMobileSheet;
 document.getElementById('ui-mode-btn').onclick=cycleUiMode;
+document.getElementById('access-mode-btn').onclick=toggleAccessMode;
 document.getElementById('mobile-ui-mode-btn').onclick=()=>{cycleUiMode();document.getElementById('mobile-actions-menu').classList.remove('open');};
 document.getElementById('mobile-actions-btn').onclick=e=>{e.stopPropagation();document.getElementById('mobile-actions-menu').classList.toggle('open');};
 document.getElementById('mobile-load-json').onclick=()=>{loadJSONFile();document.getElementById('mobile-actions-menu').classList.remove('open');};
 document.getElementById('mobile-export-json').onclick=()=>{exportJSON();document.getElementById('mobile-actions-menu').classList.remove('open');};
 document.getElementById('mobile-export-kml').onclick=()=>{exportKML();document.getElementById('mobile-actions-menu').classList.remove('open');};
 document.getElementById('mobile-api-key').onclick=()=>{
+  if(!requireEdit('設定 API Key'))return;
   document.getElementById('mobile-actions-menu').classList.remove('open');
   document.getElementById('key-input').value=orsApiKey;
   document.getElementById('key-status').textContent='';
@@ -3174,6 +3371,7 @@ document.getElementById('import-clear-fields-btn').onclick=()=>{
 };
 // API toggle
 document.getElementById('api-toggle-wrap').onclick=()=>{
+  if(!requireEdit('切換 API Key'))return;
   if(!orsApiKey){document.getElementById('key-modal').classList.add('open');return;}
   useApiKey=!useApiKey;
   days.forEach(d=>d.spots.forEach(s=>{if(s.seg)s.seg.result=null;}));
@@ -3181,11 +3379,13 @@ document.getElementById('api-toggle-wrap').onclick=()=>{
 };
 // key modal
 document.getElementById('api-key-btn').onclick=()=>{
+  if(!requireEdit('設定 API Key'))return;
   document.getElementById('key-input').value=orsApiKey;
   document.getElementById('key-status').textContent='';
   document.getElementById('key-modal').classList.add('open');
 };
 document.getElementById('key-save').onclick=()=>{
+  if(!requireEdit('儲存 API Key'))return;
   const v=document.getElementById('key-input').value.trim();
   orsApiKey=v;useApiKey=!!v;
   days.forEach(d=>d.spots.forEach(s=>{if(s.seg)s.seg.result=null;}));
@@ -3194,6 +3394,7 @@ document.getElementById('key-save').onclick=()=>{
   setTimeout(()=>document.getElementById('key-modal').classList.remove('open'),1000);
 };
 document.getElementById('key-clear').onclick=()=>{
+  if(!requireEdit('清除 API Key'))return;
   orsApiKey='';useApiKey=false;
   document.getElementById('key-input').value='';
   document.getElementById('key-status').textContent='已清除 API Key。';
@@ -3232,6 +3433,7 @@ if(document.getElementById('json-input'))document.getElementById('json-input').a
 
 /* ═══════════════ INIT ═══════════════ */
 loadLocal();
+updateAccessUI();
 updateKeyUI();
 applyUiMode();
 initMap();
@@ -3248,6 +3450,7 @@ if(!days.some(d=>d.spots.length)){
     ]}
   ];
   activeDay=0;
+  saveLocal();
 }
 renderSidebar();renderMarkers();
 const allSpots=days.flatMap(d=>d.spots);
