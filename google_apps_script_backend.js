@@ -4,9 +4,10 @@
  * Setup:
  * 1. Go to https://script.google.com and create a new Apps Script project.
  * 2. Paste this file.
- * 3. Deploy -> New deployment -> Web app.
- * 4. Execute as: Me. Who has access: Anyone with the link.
- * 5. Copy the /exec URL into the travel planner.
+ * 3. In the function dropdown, run setupTravelPlannerCloud once and authorize Drive access.
+ * 4. Deploy -> New deployment -> Web app.
+ * 5. Execute as: Me. Who has access: Anyone with the link.
+ * 6. Copy the /exec URL into the travel planner.
  *
  * Storage:
  * - GitHub Pages stores only the app code.
@@ -17,6 +18,12 @@
 const DRIVE_FOLDER_NAME = 'Travel Planner Cloud';
 const FILE_PREFIX = 'trip-planner_';
 const FILE_SUFFIX = '.json';
+
+function setupTravelPlannerCloud() {
+  const folder = getFolder_();
+  Logger.log(`Travel Planner Cloud folder ready: ${folder.getName()} (${folder.getId()})`);
+  return { ok: true, folderName: folder.getName(), folderId: folder.getId() };
+}
 
 function doGet(e) {
   const callback = String(e.parameter.callback || '').trim();
