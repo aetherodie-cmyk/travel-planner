@@ -802,10 +802,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .seg-connector{display:flex;align-items:stretch;padding:4px 0 8px}
 .seg-timeline{display:flex;flex-direction:column;align-items:center;width:26px;flex-shrink:0}
 .seg-vline{width:2px;flex:1;background:var(--line);margin:0 auto}
-.seg-body{flex:1;min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:7px;padding:7px 8px;border-radius:8px;background:#F6F7F8}
-.seg-main{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:wrap}
-.seg-label{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:11px;font-weight:850;white-space:nowrap;flex-shrink:0}
-.seg-label::before{content:'';width:9px;height:2px;border-radius:1px;background:#D1D5D8}
+.seg-body{flex:1;min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:7px;padding:8px 9px;border-radius:8px;background:#F6F7F8}
+.seg-main{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:nowrap}
+.seg-label{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;font-weight:900;white-space:nowrap;flex-shrink:0}
+.seg-label::before{display:none}
 .seg-mode-btns{display:flex;gap:2px;flex-shrink:0}
 .seg-mode-btn{width:24px;height:20px;border:1px solid var(--line);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--surface-soft);color:#9AA0A6;padding:0;transition:all .12s}
 .seg-mode-btn:hover{border-color:var(--primary);color:var(--primary-strong)}
@@ -813,8 +813,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .seg-mode-btn.active.bike{border-color:#BA7517;background:#FAEEDA;color:#854F0B}
 .seg-mode-btn.active.car{border-color:#7F77DD;background:#EEEDFE;color:#534AB7}
 .seg-mode-btn.active.transit{border-color:#D85A30;background:#FAECE7;color:#993C1D}
-.seg-result-wrap{flex:1 1 90px;min-width:0}
-.seg-result{display:block;min-width:0;font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seg-result-wrap{display:block;min-width:0;width:100%}
+.seg-result{display:block;min-width:0;font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:normal;line-height:1.45}
 .seg-result.walk{color:#0F6E56}.seg-result.bike{color:#854F0B}.seg-result.car{color:#534AB7}.seg-result.transit{color:#993C1D}
 .seg-result.muted{color:#aaa;font-weight:400}
 .seg-result.warn{color:#BA7517;font-weight:700}
@@ -822,7 +822,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .seg-warning{display:inline-flex;align-items:center;margin-left:3px;padding:1px 5px;border-radius:5px;background:#fff9ef;border:1px solid #F0D6A5;color:#BA7517;font-size:10px;font-weight:800;vertical-align:middle}
 .seg-warning.manual{background:#E6F1FB;border-color:#9BC7F2;color:#185FA5}
 .seg-warning-text{display:block;margin-top:2px;color:#BA7517;font-size:10px;font-weight:700;line-height:1.35;white-space:normal}
-.seg-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto;margin-left:auto;white-space:nowrap}
+.seg-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;width:100%;white-space:nowrap}
 .seg-tool-btn,.seg-calc-btn{height:26px;padding:0 7px;border:1px solid var(--line);border-radius:7px;background:var(--surface);cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:4px}
 .seg-tool-btn:hover,.seg-calc-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 .seg-tool-btn.danger:hover{background:#fff5f5;border-color:#fcc;color:var(--danger)}
@@ -1799,14 +1799,14 @@ function renderSegmentConnector(spot,i){
     <div class="seg-timeline"><div class="seg-vline"></div></div>
     <div class="seg-body">
       <div class="seg-main">
-        <div class="seg-label">前往下一站</div>
+        <div class="seg-label">&gt;&gt;</div>
         <div class="seg-mode-btns">${mbHtml}</div>
-        <div class="seg-result-wrap">${segmentResultHtml(seg,mode)}</div>
-        <div class="seg-actions">
-          <button class="seg-tool-btn seg-manual-toggle" type="button"><i class="ti ti-pencil"></i> ${expanded?'收合':'手動'}</button>
-          ${hasManualSegment(seg)?'<button class="seg-tool-btn danger seg-manual-clear" type="button"><i class="ti ti-x"></i> 清除</button>':''}
-          <button class="seg-calc-btn" type="button"><i class="ti ti-route"></i> 計算</button>
-        </div>
+      </div>
+      <div class="seg-result-wrap">${segmentResultHtml(seg,mode)}</div>
+      <div class="seg-actions">
+        <button class="seg-tool-btn seg-manual-toggle" type="button"><i class="ti ti-pencil"></i> ${expanded?'收合':'手動'}</button>
+        ${hasManualSegment(seg)?'<button class="seg-tool-btn danger seg-manual-clear" type="button"><i class="ti ti-x"></i> 清除</button>':''}
+        <button class="seg-calc-btn" type="button"><i class="ti ti-route"></i> 計算</button>
       </div>
       <div class="seg-manual-editor${expanded?' open':''}">
         <a class="seg-tool-btn seg-google-route" href="${googleRouteUrl}" target="_blank" rel="noopener"><i class="ti ti-brand-google-maps"></i> Google 路線</a>
