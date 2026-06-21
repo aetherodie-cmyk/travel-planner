@@ -1603,6 +1603,7 @@ let gasLastRemoteRevision='';
 let gasLastLocalSignature='';
 let gasPendingConflict=null;
 let gasLockState={lock:null,hasLock:false,checked:false};
+let gasLockBusy=false;
 function gasDeviceId(){
   let id=localStorage.getItem('tp_gas_device_id');
   if(!id){
@@ -1612,7 +1613,7 @@ function gasDeviceId(){
   return id;
 }
 function isGasLockRequired(){
-  return accessMode==='edit'&&gasSyncEnabled&&!!gasSyncConfig.url;
+  return gasSyncEnabled&&!!gasSyncConfig.url;
 }
 function gasLockIsMine(lock=gasLockState.lock){
   return !!lock&&lock.ownerId===gasDeviceId()&&(!lock.expiresAt||new Date(lock.expiresAt).getTime()>Date.now());
@@ -1938,6 +1939,11 @@ function hydrateGasInputs(){
   if(token)token.value=gasSyncConfig.token||'';
 }
 function collectGasInputs(){
+  const modal=document.getElementById('trip-modal');
+  if(!modal?.classList.contains('open')){
+    gasSyncConfig=readGasConfig();
+    return gasSyncConfig;
+  }
   const config={
     url:document.getElementById('gas-url-input')?.value.trim()||'',
     actor:document.getElementById('gas-actor-input')?.value.trim()||'',
@@ -1963,11 +1969,12 @@ function updateGasLockButtons(){
   const releaseBtn=document.getElementById('gas-release-btn');
   if(lockBtn){
     lockBtn.style.display=isGasLockRequired()?'inline-flex':'none';
-    lockBtn.disabled=!gasSyncConfig.url||!gasSyncConfig.token||gasLockState.hasLock;
-    lockBtn.innerHTML=gasLockState.hasLock?'<i class="ti ti-lock-open"></i> 編輯中':'<i class="ti ti-lock-open"></i> 開始編輯';
+    lockBtn.disabled=gasLockBusy||gasLockState.hasLock;
+    lockBtn.innerHTML=gasLockBusy?'<i class="ti ti-loader"></i> 取得中':gasLockState.hasLock?'<i class="ti ti-lock-open"></i> 編輯中':'<i class="ti ti-lock-open"></i> 開始編輯';
   }
   if(releaseBtn){
     releaseBtn.style.display=isGasLockRequired()&&gasLockState.hasLock?'inline-flex':'none';
+    releaseBtn.disabled=gasLockBusy;
   }
 }
 function setGasStatus(text,type=''){
@@ -2052,6 +2059,8 @@ async function gasLockAction(action,{silent=false}={}){
   if(!gasSyncConfig.url){setGasStatus('請先填入 Apps Script Web App URL。','err');return null;}
   if(!gasSyncConfig.token){setGasStatus('請設定編輯 Token。','err');return null;}
   try{
+    gasLockBusy=true;
+    updateGasLockButtons();
     const data=await gasJsonp(action,{
       token:gasSyncConfig.token,
       actor:gasSyncConfig.actor||'匿名旅伴',
@@ -2071,14 +2080,21 @@ async function gasLockAction(action,{silent=false}={}){
   }catch(e){
     if(!silent)setGasStatus(`${action==='acquireLock'?'取得編輯鎖':action==='renewLock'?'續約編輯鎖':'釋放編輯鎖'}失敗：${e.message}`,'err');
     return null;
+  }finally{
+    gasLockBusy=false;
+    updateGasLockButtons();
   }
 }
 async function acquireGasLock({silent=false}={}){
+  collectGasInputs();
   if(!silent)setGasStatus('正在取得編輯鎖…','sync');
   const data=await gasLockAction('acquireLock',{silent});
   if(data?.ok&&gasLockState.hasLock){
+    accessMode='edit';
+    replaceUrlForCurrentTrip();
     updateAccessUI();
     renderSidebar();
+    updateGasStatus();
     if(!silent)showToast('已取得編輯權');
     return true;
   }
@@ -2098,10 +2114,13 @@ async function renewGasLock({silent=true}={}){
   return data;
 }
 async function releaseGasLock({silent=false}={}){
+  collectGasInputs();
   if(!gasSyncConfig.url||!gasSyncConfig.token)return null;
   const hadLock=gasLockState.hasLock;
   const data=await gasLockAction('releaseLock',{silent});
   gasLockState={lock:null,hasLock:false,checked:true};
+  accessMode='view';
+  replaceUrlForCurrentTrip();
   updateAccessUI();
   renderSidebar();
   updateGasStatus();
@@ -4568,6 +4587,7 @@ window.addEventListener('beforeunload',()=>{
 
 /* ═══════════════ INIT ═══════════════ */
 gasSyncConfig=readGasConfig();
+hydrateGasInputs();
 loadLocal();
 updateAccessUI();
 updateKeyUI();
