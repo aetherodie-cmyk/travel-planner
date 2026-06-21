@@ -796,7 +796,7 @@ body.view-only .empty-day small{display:none}
 .timeline-summary .timeline-summary-pill:nth-child(2){flex:0 1 auto}
 .timeline-edit-btn,.timeline-auto-btn{border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--muted);height:28px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;flex:0 0 auto}
 .timeline-edit-btn{display:none;width:32px;padding:0;font-size:14px}
-.spot-item:hover .timeline-edit-btn,.spot-item.tools-open .timeline-edit-btn,.timeline-box.editor-open .timeline-edit-btn{display:inline-flex}
+.spot-item.tools-open .timeline-edit-btn,.timeline-box.editor-open .timeline-edit-btn{display:inline-flex}
 .timeline-edit-btn:hover,.timeline-auto-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 .timeline-editor{display:none;margin-top:7px;padding:8px;border:1px solid var(--line-soft);border-radius:12px;background:#FAFBFA}
 .timeline-editor.open{display:block}
@@ -836,28 +836,30 @@ body.view-only .empty-day small{display:none}
 .time-cancel-btn,.time-clear-btn{border:1px solid var(--line);background:var(--surface);color:var(--muted)}
 .time-done-btn{border:none;background:var(--primary);color:#fff}
 .spot-actions{display:none;gap:2px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end;max-width:44px}
-.spot-item:hover .spot-actions,.spot-item.tools-open .spot-actions{display:flex}
+.spot-item.tools-open .spot-actions{display:flex}
 .spot-btn{width:20px;height:20px;border:none;background:none;cursor:pointer;color:#B4B8BE;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;padding:0}
 .spot-btn:hover{background:var(--surface-soft);color:var(--text)}
 .spot-btn.del:hover{color:var(--danger);background:#fdf0f0}
 .spot-btn.move:hover{color:var(--primary-strong);background:var(--primary-soft)}
 .spot-btn.copy:hover{color:#185FA5;background:#E6F1FB}
 .spot-btn.info-btn:hover{color:#BA7517;background:#FAEEDA}
-.spot-more-btn{display:none}
+.spot-more-btn{display:inline-flex;width:28px;height:28px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--muted);align-items:center;justify-content:center;font-size:15px;flex:0 0 auto;cursor:pointer}
+.spot-more-btn:hover,.spot-more-btn.active{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 /* segment connector */
 .seg-connector{display:flex;align-items:stretch;padding:2px 0 4px}
 .seg-timeline{display:flex;flex-direction:column;align-items:center;width:26px;flex-shrink:0}
 .seg-vline{width:2px;flex:1;background:var(--line);margin:0 auto}
 .seg-body{flex:1;min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"main result";align-items:center;gap:5px 8px;padding:3px 0;border-radius:8px;background:transparent}
-.seg-connector:hover .seg-body,.seg-connector.tools-open .seg-body,.seg-connector.seg-expanded .seg-body{grid-template-areas:"main result" ". actions" "editor editor";padding:8px 9px;background:#F6F7F8}
+.seg-connector.tools-open .seg-body,.seg-connector.seg-expanded .seg-body{grid-template-areas:"main result" ". actions" "editor editor";padding:8px 9px;background:#F6F7F8}
 .seg-main{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:nowrap}
 .seg-main{grid-area:main}
 .seg-label{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;font-weight:900;white-space:nowrap;flex-shrink:0}
 .seg-label::before{display:none}
-.seg-more-btn{display:none}
+.seg-more-btn{display:inline-flex;width:24px;height:24px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--muted);align-items:center;justify-content:center;font-size:14px;flex:0 0 auto;cursor:pointer}
+.seg-more-btn:hover,.seg-more-btn.active{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 .seg-mode-btns{display:flex;gap:2px;flex-shrink:0}
 .seg-mode-btn{width:24px;height:20px;border:1px solid var(--line);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--surface-soft);color:#9AA0A6;padding:0;transition:all .12s}
-.seg-connector:not(:hover):not(.tools-open):not(.seg-expanded) .seg-mode-btn:not(.active){display:none}
+.seg-connector:not(.tools-open):not(.seg-expanded) .seg-mode-btn:not(.active){display:none}
 .seg-mode-btn:hover{border-color:var(--primary);color:var(--primary-strong)}
 .seg-mode-btn.active.walk{border-color:#1D9E75;background:#E1F5EE;color:#0F6E56}
 .seg-mode-btn.active.bike{border-color:#BA7517;background:#FAEEDA;color:#854F0B}
@@ -873,7 +875,7 @@ body.view-only .empty-day small{display:none}
 .seg-warning.manual{background:#E6F1FB;border-color:#9BC7F2;color:#185FA5}
 .seg-warning-text{display:block;margin-top:2px;color:#BA7517;font-size:10px;font-weight:700;line-height:1.35;white-space:normal}
 .seg-actions{grid-area:actions;display:none;align-items:center;justify-content:flex-end;gap:6px;width:100%;white-space:nowrap;flex-wrap:wrap}
-.seg-connector:hover .seg-actions,.seg-connector.tools-open .seg-actions,.seg-connector.seg-expanded .seg-actions{display:flex}
+.seg-connector.tools-open .seg-actions,.seg-connector.seg-expanded .seg-actions{display:flex}
 .seg-tool-btn,.seg-calc-btn{height:26px;padding:0 7px;border:1px solid var(--line);border-radius:7px;background:var(--surface);cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:4px}
 .seg-tool-btn:hover,.seg-calc-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 .seg-tool-btn.danger:hover{background:#fff5f5;border-color:#fcc;color:var(--danger)}
@@ -1271,8 +1273,8 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
         <button class="trip-action-btn" id="gas-enable-btn"><i class="ti ti-cloud-upload"></i> 啟用 / 重新連線</button>
         <button class="trip-action-btn" id="gas-lock-btn"><i class="ti ti-lock-open"></i> 開始編輯</button>
-        <button class="trip-action-btn secondary" id="gas-load-btn"><i class="ti ti-download"></i> 從雲端載入</button>
-        <button class="trip-action-btn secondary" id="gas-save-btn"><i class="ti ti-upload"></i> 建立/儲存雲端</button>
+        <button class="trip-action-btn secondary" id="gas-load-btn"><i class="ti ti-download"></i> 下載雲端到畫面</button>
+        <button class="trip-action-btn secondary" id="gas-save-btn"><i class="ti ti-upload"></i> 上傳目前畫面</button>
         <button class="trip-action-btn secondary" id="gas-release-btn"><i class="ti ti-lock"></i> 完成編輯</button>
         <button class="trip-action-btn danger" id="gas-disable-btn"><i class="ti ti-cloud-off"></i> 停用同步</button>
       </div>
@@ -1604,6 +1606,7 @@ let gasLastLocalSignature='';
 let gasPendingConflict=null;
 let gasLockState={lock:null,hasLock:false,checked:false};
 let gasLockBusy=false;
+let gasAutoLoadRemote=params.get('sync')==='gas';
 function gasDeviceId(){
   let id=localStorage.getItem('tp_gas_device_id');
   if(!id){
@@ -1785,7 +1788,6 @@ function saveLocal(){
     writeTripStore(store);
     localStorage.setItem('tp_v5',JSON.stringify({days,activeDay,orsApiKey,useApiKey}));
     if(cloudEnabled&&canEdit()&&!cloudApplying)scheduleCloudSave();
-    if(gasSyncEnabled&&canEdit()&&!gasApplying)scheduleGasSave();
   }catch(e){}
 }
 function loadLocal(){
@@ -1868,7 +1870,7 @@ function saveTripMeta(){
   renderSidebar();
   renderTripModal();
   if(cloudEnabled)initCloudSync();
-  if(gasSyncEnabled){startGasPolling();saveGasTrip({silent:true});}
+  if(gasSyncEnabled){startGasPolling();updateGasStatus();}
   showToast('旅程設定已儲存');
 }
 function createNewTrip(){
@@ -1885,7 +1887,7 @@ function createNewTrip(){
   renderMarkers();
   renderTripModal();
   if(cloudEnabled)initCloudSync();
-  if(gasSyncEnabled){startGasPolling();saveGasTrip({silent:true});}
+  if(gasSyncEnabled){startGasPolling();updateGasStatus();}
 }
 function switchTrip(id){
   const store=readTripStore();
@@ -1897,7 +1899,7 @@ function switchTrip(id){
   replaceUrlForCurrentTrip();
   renderTripModal();
   if(cloudEnabled)initCloudSync();
-  if(gasSyncEnabled){startGasPolling();loadGasTrip({silent:true});}
+  if(gasSyncEnabled){startGasPolling();updateGasStatus();}
 }
 function deleteTrip(id){
   if(!requireEdit('刪除旅程'))return;
@@ -2068,13 +2070,6 @@ async function gasLockAction(action,{silent=false}={}){
     });
     applyGasLockMeta(data.meta?.lock||null);
     if(data.meta?.revision)gasLastRemoteRevision=data.meta.revision;
-    if(data.trip){
-      gasApplying=true;
-      applyTripState(data.trip,{persist:true,render:true});
-      gasApplying=false;
-      gasLastRemoteUpdatedAt=data.trip.updatedAt||data.meta?.updatedAt||gasLastRemoteUpdatedAt;
-      gasLastLocalSignature=gasStateSignature(data.trip);
-    }
     updateGasStatus();
     return data;
   }catch(e){
@@ -2210,6 +2205,7 @@ async function loadGasTrip({silent=false}={}){
     gasLastRemoteUpdatedAt=remoteUpdated;
     gasLastRemoteRevision=data.meta?.revision||remote.revision||remoteUpdated||'';
     gasLastLocalSignature=remoteSig;
+    gasAutoLoadRemote=true;
     updateGasStatus();
     if(!silent)showToast('已載入雲端行程');
     return remote;
@@ -2261,6 +2257,7 @@ async function saveGasTrip({silent=false,force=false}={}){
     gasLastRemoteRevision=data.revision||data.updatedAt||payload.updatedAt;
     gasLastLocalSignature=gasStateSignature(payload);
     gasPendingConflict=null;
+    gasAutoLoadRemote=true;
     updateGasStatus();
     if(!silent)showToast('已儲存到雲端');
     return data;
@@ -2281,26 +2278,61 @@ async function saveGasTrip({silent=false,force=false}={}){
     return null;
   }
 }
+async function peekGasTrip(){
+  if(!gasSyncConfig.url)throw new Error('請先填入 Apps Script Web App URL。');
+  try{
+    return await gasJsonp('load');
+  }catch(e){
+    const msg=/failed to fetch/i.test(e.message)?'無法連線 Apps Script。請確認使用 /exec 部署網址，且 Web App 權限設為「知道連結的任何人」。':e.message;
+    throw new Error(msg);
+  }
+}
+async function uploadCurrentGasTrip(){
+  collectGasInputs();
+  if(!gasSyncConfig.url)return setGasStatus('請先填入 Apps Script Web App URL。','err');
+  if(!gasSyncConfig.token)return setGasStatus('請設定編輯 Token，兩位共編者使用同一組即可。','err');
+  if(accessMode!=='edit')accessMode='edit';
+  if(!gasSyncEnabled){
+    gasSyncEnabled=true;
+    localStorage.setItem('tp_gas_enabled','1');
+  }
+  updateAccessUI();
+  if(isGasLockRequired()&&!gasLockState.hasLock){
+    const locked=await acquireGasLock({silent:false});
+    if(!locked)return;
+  }
+  try{
+    setGasStatus('正在檢查雲端是否已有此旅程…','sync');
+    const remote=await peekGasTrip();
+    applyGasLockMeta(remote.meta?.lock||gasLockState.lock);
+    const hasRemote=!!remote.trip;
+    if(hasRemote&&!confirm('雲端已經有這個旅程。確定要用「目前畫面」覆蓋雲端 JSON 嗎？')) {
+      updateGasStatus();
+      return;
+    }
+    await saveGasTrip({force:true});
+  }catch(e){
+    setGasStatus(`上傳失敗：${e.message}`,'err');
+  }
+}
 function startGasPolling(){
   clearInterval(gasPollTimer);
   if(!gasSyncEnabled||!gasSyncConfig.url)return;
   gasPollTimer=setInterval(()=>{
     if(gasLockState.hasLock)renewGasLock({silent:true});
-    else loadGasTrip({silent:true});
+    else if(gasAutoLoadRemote)loadGasTrip({silent:true});
   },gasSyncConfig.pollSec*1000);
 }
 function enableGasSyncFromModal(){
   collectGasInputs();
   if(!gasSyncConfig.url){setGasStatus('請先填入 Apps Script Web App URL。','err');return;}
   gasSyncEnabled=true;
+  gasAutoLoadRemote=false;
   localStorage.setItem('tp_gas_enabled','1');
   replaceUrlForCurrentTrip();
   updateAccessUI();
-  updateGasStatus();
   startGasPolling();
-  loadGasTrip({silent:true}).then(remote=>{
-    if(!remote&&accessMode==='edit')saveGasTrip({silent:true});
-  });
+  setGasStatus(`已連線 Google Drive JSON 設定：${currentTripId}。目前不會自動覆蓋畫面；要把本機資料放上去請按「開始編輯」後按「上傳目前畫面」。`,'sync');
 }
 function disableGasSync(){
   clearInterval(gasPollTimer);
@@ -2881,13 +2913,6 @@ function renderSegmentConnector(spot,i){
     node.addEventListener('click',e=>e.stopPropagation());
     node.addEventListener('mousedown',e=>e.stopPropagation());
   });
-  conn.onclick=e=>{
-    if(e.target.closest('button,input,a'))return;
-    if(document.body.classList.contains('mobile-ui'))return;
-    activeSpotToolsId=null;
-    activeSegmentToolsId=activeSegmentToolsId===spot.id?null:spot.id;
-    renderSidebar();
-  };
   conn.querySelector('.seg-more-btn')?.addEventListener('click',e=>{
     e.stopPropagation();
     activeSpotToolsId=null;
@@ -2981,6 +3006,7 @@ function renderSpotList(){
             ${timelineHtml(spot,i,spots)}
           </div>
           ${spot.notes&&Object.values(spot.notes).some(v=>v)?'<div class="spot-note-dot" title="有個人筆記"></div>':''}
+          ${canEdit()?`<button class="spot-more-btn${toolsOpen?' active':''}" type="button" title="${toolsOpen?'收合操作':'更多操作'}" aria-label="${toolsOpen?'收合操作':'更多操作'}"><i class="ti ti-dots"></i></button>`:''}
           <div class="spot-actions">
             <button class="spot-btn info-btn" title="查詢景點資訊"><i class="ti ti-info-circle"></i></button>
             <button class="spot-btn copy" title="複製景點"><i class="ti ti-copy"></i></button>
@@ -3000,6 +3026,12 @@ function renderSpotList(){
       card.querySelector('.spot-btn.copy').onclick=()=>duplicateSpot(i);
       card.querySelector('.spot-btn.move').onclick=()=>openMoveModal(i);
     }
+    card.querySelector('.spot-more-btn')?.addEventListener('click',e=>{
+      e.stopPropagation();
+      activeSegmentToolsId=null;
+      activeSpotToolsId=activeSpotToolsId===spot.id?null:spot.id;
+      renderSidebar();
+    });
     card.querySelector('.spot-btn.info-btn').onclick=()=>openInfoModal(spot.id);
     attachTimelineHandlers(card,i);
     si.addEventListener('mouseenter',()=>{const m=markers[spot.id];if(m)m.openPopup();});
@@ -4413,7 +4445,7 @@ document.addEventListener('click',e=>{
   if(!document.getElementById('search-bar').contains(e.target))document.getElementById('search-results').style.display='none';
   if(!e.target.closest('.mobile-search-wrap'))document.getElementById('mobile-search-results').style.display='none';
   if(!e.target.closest('#mobile-actions-wrap'))document.getElementById('mobile-actions-menu').classList.remove('open');
-  if(document.body.classList.contains('mobile-ui')&&!e.target.closest('#mobile-spot-list .spot-item')&&!e.target.closest('#mobile-spot-list .seg-connector')){
+  if(!e.target.closest('.spot-item')&&!e.target.closest('.seg-connector')){
     if(activeSpotToolsId||activeSegmentToolsId){
       activeSpotToolsId=null;
       activeSegmentToolsId=null;
@@ -4469,8 +4501,11 @@ document.getElementById('copy-edit-url').onclick=()=>copyText(tripUrl(currentTri
 document.getElementById('copy-view-url').onclick=()=>copyText(tripUrl(currentTripId,'view'));
 document.getElementById('gas-enable-btn').onclick=enableGasSyncFromModal;
 document.getElementById('gas-lock-btn').onclick=()=>{collectGasInputs();acquireGasLock();};
-document.getElementById('gas-load-btn').onclick=()=>{collectGasInputs();loadGasTrip();};
-document.getElementById('gas-save-btn').onclick=()=>{collectGasInputs();saveGasTrip();};
+document.getElementById('gas-load-btn').onclick=()=>{
+  collectGasInputs();
+  if(confirm('要用雲端 JSON 覆蓋目前畫面嗎？如果這台有尚未上傳的修改，請先按「上傳目前畫面」。'))loadGasTrip();
+};
+document.getElementById('gas-save-btn').onclick=uploadCurrentGasTrip;
 document.getElementById('gas-release-btn').onclick=()=>{collectGasInputs();releaseGasLock();};
 document.getElementById('gas-disable-btn').onclick=disableGasSync;
 document.getElementById('cloud-enable-btn').onclick=enableCloudFromModal;
@@ -4615,7 +4650,7 @@ applyUiMode();
 if(gasSyncEnabled){
   updateGasStatus();
   startGasPolling();
-  loadGasTrip({silent:true});
+  if(gasAutoLoadRemote)loadGasTrip({silent:true});
 }
 if(cloudEnabled)initCloudSync();
 </script>
