@@ -854,6 +854,7 @@ body.view-only .empty-day small{display:none}
 .seg-main{grid-area:main}
 .seg-label{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;font-weight:900;white-space:nowrap;flex-shrink:0}
 .seg-label::before{display:none}
+.seg-more-btn{display:none}
 .seg-mode-btns{display:flex;gap:2px;flex-shrink:0}
 .seg-mode-btn{width:24px;height:20px;border:1px solid var(--line);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--surface-soft);color:#9AA0A6;padding:0;transition:all .12s}
 .seg-connector:not(:hover):not(.tools-open):not(.seg-expanded) .seg-mode-btn:not(.active){display:none}
@@ -1151,8 +1152,11 @@ body.mobile-ui #mobile-sheet{position:absolute;left:0;right:0;bottom:0;z-index:1
 #mobile-spot-list .seg-connector:hover .seg-body{grid-template-areas:"main result";padding:3px 0;background:transparent}
 #mobile-spot-list .seg-connector:hover .seg-actions{display:none}
 #mobile-spot-list .seg-connector:not(.tools-open):not(.seg-expanded) .seg-mode-btn:not(.active){display:none!important}
+#mobile-spot-list .seg-label{display:none}
+#mobile-spot-list .seg-more-btn{display:inline-flex;width:34px;height:34px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--muted);align-items:center;justify-content:center;font-size:18px;flex:0 0 auto}
+#mobile-spot-list .seg-more-btn.active{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 #mobile-spot-list .seg-connector.tools-open .seg-body,
-#mobile-spot-list .seg-connector.seg-expanded .seg-body{padding:8px 10px}
+#mobile-spot-list .seg-connector.seg-expanded .seg-body{grid-template-areas:"main result" "actions actions" "editor editor";padding:8px 10px}
 #mobile-spot-list .seg-connector.tools-open .seg-actions,
 #mobile-spot-list .seg-connector.seg-expanded .seg-actions{display:flex}
 #mobile-spot-list .seg-mode-btns{background:var(--surface-soft);border-radius:10px;padding:4px;gap:2px}
@@ -2694,6 +2698,7 @@ function renderSegmentConnector(spot,i){
     <div class="seg-body">
       <div class="seg-main">
         <div class="seg-label">&gt;&gt;</div>
+        <button class="seg-more-btn${toolsOpen||expanded?' active':''}" type="button" title="${toolsOpen||expanded?'收合交通操作':'交通操作'}" aria-label="${toolsOpen||expanded?'收合交通操作':'交通操作'}"><i class="ti ti-dots"></i></button>
         <div class="seg-mode-btns">${mbHtml}</div>
       </div>
       <div class="seg-result-wrap">${segmentResultHtml(seg,mode)}</div>
@@ -2716,10 +2721,17 @@ function renderSegmentConnector(spot,i){
   });
   conn.onclick=e=>{
     if(e.target.closest('button,input,a'))return;
+    if(document.body.classList.contains('mobile-ui'))return;
     activeSpotToolsId=null;
     activeSegmentToolsId=activeSegmentToolsId===spot.id?null:spot.id;
     renderSidebar();
   };
+  conn.querySelector('.seg-more-btn')?.addEventListener('click',e=>{
+    e.stopPropagation();
+    activeSpotToolsId=null;
+    activeSegmentToolsId=activeSegmentToolsId===spot.id?null:spot.id;
+    renderSidebar();
+  });
   conn.querySelectorAll('.seg-mode-btn').forEach(btn=>{
     btn.onclick=()=>{
       if(!requireEdit('修改交通方式'))return;
