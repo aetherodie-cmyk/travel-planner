@@ -1270,8 +1270,10 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
         <button class="trip-action-btn" id="gas-enable-btn"><i class="ti ti-cloud-upload"></i> 啟用 / 重新連線</button>
+        <button class="trip-action-btn" id="gas-lock-btn"><i class="ti ti-lock-open"></i> 開始編輯</button>
         <button class="trip-action-btn secondary" id="gas-load-btn"><i class="ti ti-download"></i> 從雲端載入</button>
         <button class="trip-action-btn secondary" id="gas-save-btn"><i class="ti ti-upload"></i> 建立/儲存雲端</button>
+        <button class="trip-action-btn secondary" id="gas-release-btn"><i class="ti ti-lock"></i> 完成編輯</button>
         <button class="trip-action-btn danger" id="gas-disable-btn"><i class="ti ti-cloud-off"></i> 停用同步</button>
       </div>
       <div class="cloud-status" id="gas-status">尚未啟用。適合先 2 人共編；純檢視連結可讀取，本機編輯需有 token。</div>
@@ -1600,10 +1602,26 @@ let gasLastRemoteUpdatedAt='';
 let gasLastRemoteRevision='';
 let gasLastLocalSignature='';
 let gasPendingConflict=null;
-function canEdit(){return accessMode==='edit';}
+let gasLockState={lock:null,hasLock:false,checked:false};
+function gasDeviceId(){
+  let id=localStorage.getItem('tp_gas_device_id');
+  if(!id){
+    id='dev_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10);
+    localStorage.setItem('tp_gas_device_id',id);
+  }
+  return id;
+}
+function isGasLockRequired(){
+  return accessMode==='edit'&&gasSyncEnabled&&!!gasSyncConfig.url;
+}
+function gasLockIsMine(lock=gasLockState.lock){
+  return !!lock&&lock.ownerId===gasDeviceId()&&(!lock.expiresAt||new Date(lock.expiresAt).getTime()>Date.now());
+}
+function canEdit(){return accessMode==='edit'&&(!isGasLockRequired()||gasLockState.hasLock);}
 function requireEdit(action='修改行程'){
   if(canEdit())return true;
-  showToast(`目前是純檢視模式，無法${action}`);
+  if(isGasLockRequired())showToast(`請先按「開始編輯」取得編輯鎖，才能${action}`);
+  else showToast(`目前是純檢視模式，無法${action}`);
   return false;
 }
 function recordActivity(action,detail={}){
@@ -1720,13 +1738,21 @@ function updateAccessUI(){
   if(btn){
     btn.classList.toggle('edit',canEdit());
     btn.classList.toggle('view',!canEdit());
-    btn.querySelector('i').className=canEdit()?'ti ti-lock-open':'ti ti-eye';
+    btn.querySelector('i').className=canEdit()?'ti ti-lock-open':isGasLockRequired()?'ti ti-lock':'ti ti-eye';
   }
-  if(lbl)lbl.textContent=canEdit()?'可編輯':'純檢視';
+  if(lbl){
+    if(isGasLockRequired())lbl.textContent=canEdit()?'編輯中':'開始編輯';
+    else lbl.textContent=canEdit()?'可編輯':'純檢視';
+  }
   const tripLbl=document.getElementById('trip-id-label');
   if(tripLbl)tripLbl.textContent=`${gasSyncEnabled?'Google Drive JSON':cloudEnabled?'雲端':'本機'}：${currentTripId}`;
 }
 function toggleAccessMode(){
+  if(isGasLockRequired()){
+    if(gasLockState.hasLock)releaseGasLock();
+    else acquireGasLock();
+    return;
+  }
   const next=canEdit()?'view':'edit';
   const nextParams=new URLSearchParams(location.search);
   nextParams.set('mode',next);
@@ -1921,6 +1947,29 @@ function collectGasInputs(){
   writeGasConfig(config);
   return gasSyncConfig;
 }
+function applyGasLockMeta(lock){
+  gasLockState.lock=lock||null;
+  gasLockState.hasLock=gasLockIsMine(lock);
+  gasLockState.checked=true;
+  updateAccessUI();
+  updateGasLockButtons();
+}
+function gasLockTimeText(lock=gasLockState.lock){
+  if(!lock?.expiresAt)return '';
+  return new Date(lock.expiresAt).toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+}
+function updateGasLockButtons(){
+  const lockBtn=document.getElementById('gas-lock-btn');
+  const releaseBtn=document.getElementById('gas-release-btn');
+  if(lockBtn){
+    lockBtn.style.display=isGasLockRequired()?'inline-flex':'none';
+    lockBtn.disabled=!gasSyncConfig.url||!gasSyncConfig.token||gasLockState.hasLock;
+    lockBtn.innerHTML=gasLockState.hasLock?'<i class="ti ti-lock-open"></i> 編輯中':'<i class="ti ti-lock-open"></i> 開始編輯';
+  }
+  if(releaseBtn){
+    releaseBtn.style.display=isGasLockRequired()&&gasLockState.hasLock?'inline-flex':'none';
+  }
+}
 function setGasStatus(text,type=''){
   const el=document.getElementById('gas-status');
   if(!el)return;
@@ -1928,6 +1977,7 @@ function setGasStatus(text,type=''){
   el.className=`cloud-status ${type}`.trim();
 }
 function updateGasStatus(){
+  updateGasLockButtons();
   if(!gasSyncEnabled){
     setGasStatus('尚未啟用。適合先 2 人共編；純檢視連結可讀取，本機編輯需有 token。');
     return;
@@ -1938,6 +1988,18 @@ function updateGasStatus(){
   }
   const who=gasSyncConfig.actor||'匿名旅伴';
   const last=gasLastRemoteUpdatedAt?`，遠端更新：${new Date(gasLastRemoteUpdatedAt).toLocaleString('zh-TW')}`:'';
+  if(isGasLockRequired()){
+    if(gasLockState.hasLock){
+      setGasStatus(`你正在編輯：${currentTripId}（${who}）。鎖定會自動續約，目前到 ${gasLockTimeText()}。完成後請按「完成編輯」。${last}`,'ok');
+      return;
+    }
+    if(gasLockState.lock){
+      setGasStatus(`目前由 ${gasLockState.lock.ownerName||'另一位旅伴'} 編輯中，預計鎖定到 ${gasLockTimeText(gasLockState.lock)}。你現在看到的是唯讀畫面。${last}`,'sync');
+      return;
+    }
+    setGasStatus(`Google Drive JSON 已連線：${currentTripId}。按「開始編輯」取得 5 分鐘編輯鎖，編輯中會自動續約。${last}`,'sync');
+    return;
+  }
   setGasStatus(`Google Drive JSON 同步中：${currentTripId}（${who}）${last}`,'ok');
 }
 function buildGasEndpoint(action){
@@ -1985,6 +2047,66 @@ function gasJsonp(action,extra={}){
     script.src=url.toString();
     document.head.appendChild(script);
   });
+}
+async function gasLockAction(action,{silent=false}={}){
+  if(!gasSyncConfig.url){setGasStatus('請先填入 Apps Script Web App URL。','err');return null;}
+  if(!gasSyncConfig.token){setGasStatus('請設定編輯 Token。','err');return null;}
+  try{
+    const data=await gasJsonp(action,{
+      token:gasSyncConfig.token,
+      actor:gasSyncConfig.actor||'匿名旅伴',
+      ownerId:gasDeviceId()
+    });
+    applyGasLockMeta(data.meta?.lock||null);
+    if(data.meta?.revision)gasLastRemoteRevision=data.meta.revision;
+    if(data.trip){
+      gasApplying=true;
+      applyTripState(data.trip,{persist:true,render:true});
+      gasApplying=false;
+      gasLastRemoteUpdatedAt=data.trip.updatedAt||data.meta?.updatedAt||gasLastRemoteUpdatedAt;
+      gasLastLocalSignature=gasStateSignature(data.trip);
+    }
+    updateGasStatus();
+    return data;
+  }catch(e){
+    if(!silent)setGasStatus(`${action==='acquireLock'?'取得編輯鎖':action==='renewLock'?'續約編輯鎖':'釋放編輯鎖'}失敗：${e.message}`,'err');
+    return null;
+  }
+}
+async function acquireGasLock({silent=false}={}){
+  if(!silent)setGasStatus('正在取得編輯鎖…','sync');
+  const data=await gasLockAction('acquireLock',{silent});
+  if(data?.ok&&gasLockState.hasLock){
+    updateAccessUI();
+    renderSidebar();
+    if(!silent)showToast('已取得編輯權');
+    return true;
+  }
+  if(data?.meta?.lock)applyGasLockMeta(data.meta.lock);
+  updateGasStatus();
+  return false;
+}
+async function renewGasLock({silent=true}={}){
+  if(!gasSyncEnabled||!gasSyncConfig.url||!gasLockState.hasLock)return null;
+  const data=await gasLockAction('renewLock',{silent});
+  if(!data?.ok){
+    gasLockState.hasLock=false;
+    updateAccessUI();
+    renderSidebar();
+    updateGasStatus();
+  }
+  return data;
+}
+async function releaseGasLock({silent=false}={}){
+  if(!gasSyncConfig.url||!gasSyncConfig.token)return null;
+  const hadLock=gasLockState.hasLock;
+  const data=await gasLockAction('releaseLock',{silent});
+  gasLockState={lock:null,hasLock:false,checked:true};
+  updateAccessUI();
+  renderSidebar();
+  updateGasStatus();
+  if(hadLock&&!silent)showToast('已完成編輯並釋放鎖');
+  return data;
 }
 function gasStateSignature(trip){
   return stateSignature(trip);
@@ -2047,8 +2169,13 @@ async function loadGasTrip({silent=false}={}){
     }catch(fetchErr){
       data=await gasJsonp('load');
     }
+    applyGasLockMeta(data.meta?.lock||null);
     const remote=data.trip;
     if(!remote){
+      if(data.meta?.lock){
+        updateGasStatus();
+        return null;
+      }
       setGasStatus(canEdit()?'雲端尚未建立這個旅程。若要把目前本機旅程放到 Drive，請按「建立/儲存雲端」。':'雲端找不到這個旅程；請確認連結的 tripId 是否正確，或請共編者先建立雲端旅程。','sync');
       return null;
     }
@@ -2076,8 +2203,13 @@ async function loadGasTrip({silent=false}={}){
 }
 async function saveGasTrip({silent=false,force=false}={}){
   if(!gasSyncConfig.url)return setGasStatus('請先填入 Apps Script Web App URL。','err');
-  if(!canEdit())return setGasStatus('目前是純檢視模式，不能寫入雲端。','err');
+  if(accessMode!=='edit')return setGasStatus('目前是純檢視模式，不能寫入雲端。','err');
   if(!gasSyncConfig.token)return setGasStatus('請設定編輯 Token，兩位共編者使用同一組即可。','err');
+  if(isGasLockRequired()&&!gasLockState.hasLock){
+    const locked=await acquireGasLock({silent:true});
+    if(!locked)return setGasStatus('尚未取得編輯鎖，不能儲存。請按「開始編輯」。','err');
+  }
+  if(!canEdit())return setGasStatus('目前沒有編輯權，不能寫入雲端。','err');
   try{
     if(!silent)setGasStatus('正在儲存到 Google Drive JSON 雲端…','sync');
     const payload=makeTripState();
@@ -2089,6 +2221,7 @@ async function saveGasTrip({silent=false,force=false}={}){
     body.set('tripId',currentTripId);
     body.set('token',gasSyncConfig.token);
     body.set('actor',gasSyncConfig.actor||'匿名旅伴');
+    body.set('ownerId',gasDeviceId());
     body.set('baseRevision',gasLastRemoteRevision||'');
     if(force)body.set('force','1');
     body.set('payload',JSON.stringify(payload));
@@ -2114,6 +2247,12 @@ async function saveGasTrip({silent=false,force=false}={}){
     return data;
   }catch(e){
     let msg=/failed to fetch/i.test(e.message)?'無法連線 Apps Script。請確認使用 /exec 部署網址，且 Web App 權限設為「知道連結的任何人」。':e.message;
+    if(/No active edit lock|Edit lock expired|locked by/i.test(msg)){
+      gasLockState={lock:null,hasLock:false,checked:true};
+      updateAccessUI();
+      renderSidebar();
+      updateGasStatus();
+    }
     if(/Cloud version changed|has not loaded/i.test(msg)){
       const draftId=createConflictDraft();
       openCloudConflictModal(draftId);
@@ -2126,7 +2265,10 @@ async function saveGasTrip({silent=false,force=false}={}){
 function startGasPolling(){
   clearInterval(gasPollTimer);
   if(!gasSyncEnabled||!gasSyncConfig.url)return;
-  gasPollTimer=setInterval(()=>loadGasTrip({silent:true}),gasSyncConfig.pollSec*1000);
+  gasPollTimer=setInterval(()=>{
+    if(gasLockState.hasLock)renewGasLock({silent:true});
+    else loadGasTrip({silent:true});
+  },gasSyncConfig.pollSec*1000);
 }
 function enableGasSyncFromModal(){
   collectGasInputs();
@@ -2138,12 +2280,13 @@ function enableGasSyncFromModal(){
   updateGasStatus();
   startGasPolling();
   loadGasTrip({silent:true}).then(remote=>{
-    if(!remote&&canEdit())saveGasTrip({silent:true});
+    if(!remote&&accessMode==='edit')saveGasTrip({silent:true});
   });
 }
 function disableGasSync(){
   clearInterval(gasPollTimer);
   gasPollTimer=null;
+  gasLockState={lock:null,hasLock:false,checked:false};
   gasSyncEnabled=false;
   localStorage.setItem('tp_gas_enabled','0');
   replaceUrlForCurrentTrip();
@@ -4306,8 +4449,10 @@ document.getElementById('trip-new-btn').onclick=createNewTrip;
 document.getElementById('copy-edit-url').onclick=()=>copyText(tripUrl(currentTripId,'edit'));
 document.getElementById('copy-view-url').onclick=()=>copyText(tripUrl(currentTripId,'view'));
 document.getElementById('gas-enable-btn').onclick=enableGasSyncFromModal;
+document.getElementById('gas-lock-btn').onclick=()=>{collectGasInputs();acquireGasLock();};
 document.getElementById('gas-load-btn').onclick=()=>{collectGasInputs();loadGasTrip();};
 document.getElementById('gas-save-btn').onclick=()=>{collectGasInputs();saveGasTrip();};
+document.getElementById('gas-release-btn').onclick=()=>{collectGasInputs();releaseGasLock();};
 document.getElementById('gas-disable-btn').onclick=disableGasSync;
 document.getElementById('cloud-enable-btn').onclick=enableCloudFromModal;
 document.getElementById('cloud-disable-btn').onclick=disableCloud;
@@ -4408,6 +4553,17 @@ if(document.getElementById('json-cancel-btn'))document.getElementById('json-canc
 // support Cmd/Ctrl+Enter to parse
 if(document.getElementById('json-input'))document.getElementById('json-input').addEventListener('keydown',e=>{
   if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();parseJsonIntoNotes();}
+});
+
+window.addEventListener('beforeunload',()=>{
+  if(!gasSyncEnabled||!gasSyncConfig.url||!gasLockState.hasLock)return;
+  const body=new URLSearchParams();
+  body.set('action','releaseLock');
+  body.set('tripId',currentTripId);
+  body.set('token',gasSyncConfig.token||'');
+  body.set('actor',gasSyncConfig.actor||'匿名旅伴');
+  body.set('ownerId',gasDeviceId());
+  navigator.sendBeacon?.(gasSyncConfig.url,body);
 });
 
 /* ═══════════════ INIT ═══════════════ */
