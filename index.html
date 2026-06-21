@@ -1125,8 +1125,9 @@ body.mobile-ui #mobile-sheet{position:absolute;left:0;right:0;bottom:0;z-index:1
 #mobile-spot-list .spot-timeline,#mobile-spot-list .seg-timeline{width:38px}
 #mobile-spot-list .spot-dot{width:30px;height:30px;font-size:15px}
 #mobile-spot-list .spot-vline,#mobile-spot-list .seg-vline{background:#B7D7C0;min-height:18px}
-#mobile-spot-list .spot-item{min-height:62px;padding:11px 0;border:none;border-radius:0;cursor:default;align-items:flex-start;background:transparent;flex-wrap:wrap}
-#mobile-spot-list .spot-info{flex:1 1 calc(100% - 44px)}
+#mobile-spot-list .spot-item{min-height:62px;padding:11px 0;border:none;border-radius:0;cursor:default;align-items:flex-start;background:transparent;display:grid;grid-template-columns:minmax(0,1fr) 40px;grid-template-areas:"info more" "actions actions";column-gap:10px;position:relative}
+#mobile-spot-list .spot-item:not(:has(.spot-more-btn)){grid-template-columns:minmax(0,1fr);grid-template-areas:"info" "actions"}
+#mobile-spot-list .spot-info{grid-area:info;min-width:0}
 #mobile-spot-list .spot-item:hover{border-color:transparent}
 #mobile-spot-list .spot-name{font-size:18px;font-weight:800;color:var(--text)}
 #mobile-spot-list .spot-meta{font-size:13px;color:var(--muted);margin-top:5px}
@@ -1136,15 +1137,15 @@ body.mobile-ui #mobile-sheet{position:absolute;left:0;right:0;bottom:0;z-index:1
 #mobile-spot-list .time-chip input[type="number"]{width:48px}
 #mobile-spot-list .time-select{height:30px;min-width:72px;font-size:16px;border-radius:9px}
 #mobile-spot-list .spot-btn{width:36px;height:36px;font-size:18px;color:var(--muted)}
-#mobile-spot-list .spot-more-btn{display:inline-flex;width:34px;height:34px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--muted);align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;margin-top:28px}
+#mobile-spot-list .spot-more-btn{grid-area:more;justify-self:end;display:inline-flex;width:34px;height:34px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--muted);align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;margin-top:28px}
 #mobile-spot-list .spot-more-btn.active{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
-#mobile-spot-list .spot-actions{gap:1px;max-width:none;flex:1 0 100%;flex-wrap:nowrap;justify-content:flex-start;background:#F7F8F9;border-radius:12px;padding:6px;margin-top:8px}
+#mobile-spot-list .spot-actions{grid-area:actions;gap:1px;max-width:none;flex-wrap:nowrap;justify-content:flex-start;background:#F7F8F9;border-radius:12px;padding:6px;margin-top:8px}
 #mobile-spot-list .spot-item:hover .spot-actions,
 #mobile-spot-list .spot-item:hover .timeline-edit-btn{display:none}
 #mobile-spot-list .spot-item.tools-open .spot-actions{display:flex}
 #mobile-spot-list .spot-item.tools-open .timeline-edit-btn,
 #mobile-spot-list .timeline-box.editor-open .timeline-edit-btn{display:inline-flex}
-#mobile-spot-list .spot-note-dot{width:8px;height:8px;margin-top:14px;background:#D67B00}
+#mobile-spot-list .spot-note-dot{position:absolute;right:48px;top:24px;width:8px;height:8px;margin-top:0;background:#D67B00}
 #mobile-spot-list .seg-connector{padding:0 0 3px}
 #mobile-spot-list .seg-body{padding:3px 0;gap:5px 8px}
 #mobile-spot-list .seg-connector:hover .seg-body{grid-template-areas:"main result";padding:3px 0;background:transparent}
@@ -2722,6 +2723,12 @@ function renderSegmentConnector(spot,i){
   conn.querySelectorAll('.seg-mode-btn').forEach(btn=>{
     btn.onclick=()=>{
       if(!requireEdit('修改交通方式'))return;
+      if(document.body.classList.contains('mobile-ui')&&activeSegmentToolsId!==spot.id&&!expandedSegmentIds.has(spot.id)){
+        activeSpotToolsId=null;
+        activeSegmentToolsId=spot.id;
+        renderSidebar();
+        return;
+      }
       const old=spot.seg||{};
       spot.seg={mode:btn.dataset.mode,result:null};
       if(hasManualSegment(old))spot.seg.manualDurationMin=old.manualDurationMin;
