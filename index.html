@@ -1590,7 +1590,9 @@ const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/';
 function sanitizeTripId(value){
   return String(value||'local-default').trim().replace(/[^\w-]/g,'-').slice(0,48)||'local-default';
 }
-let currentTripId=sanitizeTripId(params.get('trip')||localStorage.getItem('tp_active_trip_id')||'local-default');
+const requestedTripIdParam=params.get('trip');
+const hasTripIdParam=!!requestedTripIdParam;
+let currentTripId=sanitizeTripId(requestedTripIdParam||localStorage.getItem('tp_active_trip_id')||'local-default');
 let currentTripTitle='旅遊行程規劃';
 let activityLog=[];
 let accessMode=params.get('mode')==='view'?'view':'edit';
@@ -1816,9 +1818,13 @@ function saveLocal(){
 function loadLocal(){
   try{
     const store=readTripStore();
-    const trip=store.trips?.[currentTripId]||store.trips?.[store.activeTripId];
+    const trip=store.trips?.[currentTripId]||(!hasTripIdParam?store.trips?.[store.activeTripId]:null);
     if(trip){
       applyTripState(trip,{persist:false,render:false});
+      return;
+    }
+    if(hasTripIdParam){
+      resetTripData();
       return;
     }
     const raw=localStorage.getItem('tp_v5')||localStorage.getItem('tp_v4');
@@ -4721,7 +4727,7 @@ updateAccessUI();
 updateKeyUI();
 applyUiMode();
 initMap();
-if(!days.some(d=>d.spots.length)){
+if(!days.some(d=>d.spots.length)&&!hasTripIdParam&&!gasAutoLoadRemote){
   days=[
     {name:'第 1 天',spots:[
       {id:'d1',name:'台北 101',addr:'台北市信義區信義路五段7號',lat:25.0338,lng:121.5645,osmType:'way',osmId:'33509002',seg:{mode:'foot-walking',result:null}},
