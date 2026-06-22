@@ -1419,6 +1419,17 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
   </div>
 </div>
 
+<!-- LOCK NOTICE MODAL -->
+<div class="overlay" id="lock-notice-modal">
+  <div class="modal-box" style="width:380px">
+    <div class="modal-hd"><h2><i class="ti ti-lock"></i> <span id="lock-notice-title">有人正在編輯</span></h2><button class="modal-x" id="lock-notice-modal-x">×</button></div>
+    <div class="trip-help" id="lock-notice-msg" style="margin-bottom:12px"></div>
+    <div style="display:flex;justify-content:flex-end">
+      <button class="trip-action-btn" id="lock-notice-ok"><i class="ti ti-check"></i> 我知道了</button>
+    </div>
+  </div>
+</div>
+
 <!-- INFO MODAL -->
 <div class="overlay" id="info-modal">
   <div class="modal-box">
@@ -1603,7 +1614,7 @@ const params=new URLSearchParams(location.search);
 const CLOUD_CONFIG_KEY='tp_cloud_config';
 const GAS_SYNC_KEY='tp_gas_sync_config';
 const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/';
-const APP_VERSION='20260623-busy-lock';
+const APP_VERSION='20260623-lock-modal';
 function sanitizeTripId(value){
   return String(value||'local-default').trim().replace(/[^\w-]/g,'-').slice(0,48)||'local-default';
 }
@@ -2051,6 +2062,17 @@ function gasLockNotice(lock=gasLockState.lock){
   const until=gasLockTimeText(lock);
   return `${who} 編輯中${until?`，鎖定到 ${until}`:''}。你目前是唯讀，等對方儲存並結束或鎖自動過期後再試。`;
 }
+function showLockNotice(lock=gasLockState.lock){
+  const who=lock?.ownerName||'另一位旅伴';
+  const until=gasLockTimeText(lock);
+  const title=document.getElementById('lock-notice-title');
+  const msg=document.getElementById('lock-notice-msg');
+  if(title)title.textContent=`${who} 正在編輯`;
+  if(msg){
+    msg.innerHTML=`目前雲端正本由 <b>${esc(who)}</b> 編輯中。${until?`<br>編輯鎖預計到 <b>${esc(until)}</b>。`:''}<br>你現在看到的是唯讀畫面；請等對方按「儲存並結束」，或等鎖自動過期後再按「開始編輯」。`;
+  }
+  document.getElementById('lock-notice-modal')?.classList.add('open');
+}
 function updateGasLockButtons(){
   const lockBtn=document.getElementById('gas-lock-btn');
   const releaseBtn=document.getElementById('gas-release-btn');
@@ -2175,7 +2197,7 @@ async function gasLockAction(action,{silent=false}={}){
       if(e.data.locked&&action==='acquireLock'){
         const msg=gasLockNotice(e.data.meta.lock);
         setGasStatus(msg,'sync');
-        if(!silent)showToast(msg,6500);
+        if(!silent){showToast(msg,6500);showLockNotice(e.data.meta.lock);}
         return e.data;
       }
     }
@@ -2204,7 +2226,10 @@ async function acquireGasLock({silent=false}={}){
     }
     if(data?.meta?.lock)applyGasLockMeta(data.meta.lock);
     updateGasStatus();
-    if(data?.locked&&data.meta?.lock&&!silent)showToast(gasLockNotice(data.meta.lock),6500);
+    if(data?.locked&&data.meta?.lock&&!silent){
+      showToast(gasLockNotice(data.meta.lock),6500);
+      showLockNotice(data.meta.lock);
+    }
     return false;
   }finally{
     if(showBusy)endBusy();
@@ -4762,6 +4787,10 @@ document.getElementById('move-modal').onclick=e=>{if(e.target===document.getElem
 // day order modal
 document.getElementById('day-order-modal-x').onclick=()=>document.getElementById('day-order-modal').classList.remove('open');
 document.getElementById('day-order-modal').onclick=e=>{if(e.target===document.getElementById('day-order-modal'))document.getElementById('day-order-modal').classList.remove('open');};
+// lock notice modal
+document.getElementById('lock-notice-modal-x').onclick=()=>document.getElementById('lock-notice-modal').classList.remove('open');
+document.getElementById('lock-notice-ok').onclick=()=>document.getElementById('lock-notice-modal').classList.remove('open');
+document.getElementById('lock-notice-modal').onclick=e=>{if(e.target===document.getElementById('lock-notice-modal'))document.getElementById('lock-notice-modal').classList.remove('open');};
 // cloud conflict modal
 document.getElementById('cloud-conflict-modal-x').onclick=()=>document.getElementById('cloud-conflict-modal').classList.remove('open');
 document.getElementById('cloud-conflict-modal').onclick=e=>{if(e.target===document.getElementById('cloud-conflict-modal'))document.getElementById('cloud-conflict-modal').classList.remove('open');};
