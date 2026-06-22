@@ -1235,7 +1235,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
       </div>
       <div class="trip-url-box">
         <div class="trip-help" style="margin-top:0">
-          <b>分享連結：</b>把下方連結傳給旅伴。編輯連結仍需要相同 Token 才能寫入；檢視連結只讀。
+          <b>分享連結：</b>把下方連結傳給旅伴。若已設定 Apps Script URL，連結會讀取 Google Drive 裡的 JSON；檢視連結只讀，編輯連結仍需要 Token。
         </div>
         <div class="trip-url-row">
           <div class="trip-url-label">編輯</div>
@@ -1252,14 +1252,14 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         <span><i class="ti ti-device-desktop"></i> 本機旅程（只在這台裝置）</span>
         <button class="trip-action-btn secondary" id="trip-new-btn"><i class="ti ti-plus"></i> 新增旅程</button>
       </div>
-      <div class="trip-help"><b>本機旅程：</b>只存在這台電腦 / 手機的瀏覽器。按「本機開啟」只是切換目前畫面，不會自動上傳。要給別人共編，請到下方「Google Drive JSON 共編」按「儲存雲端」。</div>
+      <div class="trip-help"><b>本機旅程：</b>只存在這台電腦 / 手機的瀏覽器。按「本機開啟」只是切換目前畫面，不會自動上傳，也不會讓別人看到這台裝置的本機資料。</div>
       <div class="trip-list" id="trip-list"></div>
       <div class="trip-section-title"><i class="ti ti-cloud"></i> Google Drive JSON 共編</div>
       <div class="trip-form-field">
         <label>Apps Script Web App URL</label>
         <input id="gas-url-input" placeholder="貼上部署後的 /exec 網址"/>
       </div>
-      <div class="trip-help"><b>雲端旅程：</b>會透過 Apps Script 存成 Google Drive 裡的單一 JSON 檔。GitHub 只放 APP，Drive JSON 才是共編資料。若出現 Failed to fetch，通常是 Apps Script 部署權限或尚未更新後端程式。</div>
+      <div class="trip-help"><b>雲端旅程：</b>Apps Script URL 是 APP 讀寫 Google Drive JSON 的入口；Token 是簡單的編輯密碼。下載會用 Drive JSON 覆蓋目前畫面；上傳會把目前畫面寫回 Drive JSON。</div>
       <div class="trip-form-grid">
         <div class="trip-form-field">
           <label>你的暱稱</label>
@@ -1271,25 +1271,27 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-        <button class="trip-action-btn" id="gas-enable-btn"><i class="ti ti-cloud-upload"></i> 啟用 / 重新連線</button>
-        <button class="trip-action-btn" id="gas-lock-btn"><i class="ti ti-lock-open"></i> 開始編輯</button>
-        <button class="trip-action-btn secondary" id="gas-load-btn"><i class="ti ti-download"></i> 下載雲端到畫面</button>
-        <button class="trip-action-btn secondary" id="gas-save-btn"><i class="ti ti-upload"></i> 上傳目前畫面</button>
-        <button class="trip-action-btn secondary" id="gas-release-btn"><i class="ti ti-lock"></i> 完成編輯</button>
-        <button class="trip-action-btn danger" id="gas-disable-btn"><i class="ti ti-cloud-off"></i> 停用同步</button>
+        <button class="trip-action-btn" id="gas-enable-btn"><i class="ti ti-plug-connected"></i> 連接 Drive JSON</button>
+        <button class="trip-action-btn secondary" id="gas-load-btn"><i class="ti ti-download"></i> 下載 JSON 到畫面</button>
+        <button class="trip-action-btn secondary" id="gas-save-btn"><i class="ti ti-upload"></i> 上傳畫面到 JSON</button>
+        <button class="trip-action-btn danger" id="gas-disable-btn"><i class="ti ti-cloud-off"></i> 斷開雲端</button>
+        <button class="trip-action-btn" id="gas-lock-btn" style="display:none"><i class="ti ti-lock-open"></i> 開始編輯</button>
+        <button class="trip-action-btn secondary" id="gas-release-btn" style="display:none"><i class="ti ti-lock"></i> 完成編輯</button>
       </div>
       <div class="cloud-status" id="gas-status">尚未啟用。適合先 2 人共編；純檢視連結可讀取，本機編輯需有 token。</div>
-      <div class="trip-section-title"><i class="ti ti-cloud"></i> Firebase 共編（進階）</div>
-      <div class="trip-form-field">
-        <label>Firebase Web Config JSON</label>
-        <textarea id="cloud-config-input" placeholder='{ "apiKey": "...", "authDomain": "...", "projectId": "..." }'></textarea>
+      <div style="display:none">
+        <div class="trip-section-title"><i class="ti ti-cloud"></i> Firebase 共編（進階）</div>
+        <div class="trip-form-field">
+          <label>Firebase Web Config JSON</label>
+          <textarea id="cloud-config-input" placeholder='{ "apiKey": "...", "authDomain": "...", "projectId": "..." }'></textarea>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <button class="trip-action-btn" id="cloud-enable-btn"><i class="ti ti-cloud-upload"></i> 啟用 / 重新連線</button>
+          <button class="trip-action-btn secondary" id="cloud-push-btn"><i class="ti ti-upload"></i> 推送目前行程</button>
+          <button class="trip-action-btn danger" id="cloud-disable-btn"><i class="ti ti-cloud-off"></i> 停用雲端</button>
+        </div>
+        <div class="cloud-status" id="cloud-status">尚未啟用雲端共編。本機可以管理多個旅程，但跨裝置與多人同步需設定 Firebase。</div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-        <button class="trip-action-btn" id="cloud-enable-btn"><i class="ti ti-cloud-upload"></i> 啟用 / 重新連線</button>
-        <button class="trip-action-btn secondary" id="cloud-push-btn"><i class="ti ti-upload"></i> 推送目前行程</button>
-        <button class="trip-action-btn danger" id="cloud-disable-btn"><i class="ti ti-cloud-off"></i> 停用雲端</button>
-      </div>
-      <div class="cloud-status" id="cloud-status">尚未啟用雲端共編。本機可以管理多個旅程，但跨裝置與多人同步需設定 Firebase。</div>
     </div>
   </div>
 </div>
@@ -1833,13 +1835,9 @@ function renderTripModal(){
       </div>
       <div class="trip-row-actions">
         <button class="trip-action-btn secondary" data-action="open"><i class="ti ti-folder-open"></i> 本機開啟</button>
-        <button class="trip-action-btn secondary" data-action="copy-view"><i class="ti ti-eye"></i> 複製檢視</button>
-        <button class="trip-action-btn secondary" data-action="copy-edit"><i class="ti ti-edit"></i> 複製編輯</button>
         <button class="trip-action-btn danger" data-action="delete"><i class="ti ti-trash"></i></button>
       </div>`;
     row.querySelector('[data-action="open"]').onclick=()=>switchTrip(trip.id);
-    row.querySelector('[data-action="copy-view"]').onclick=()=>copyText(tripUrl(trip.id,'view'));
-    row.querySelector('[data-action="copy-edit"]').onclick=()=>copyText(tripUrl(trip.id,'edit'));
     row.querySelector('[data-action="delete"]').onclick=()=>deleteTrip(trip.id);
     list.appendChild(row);
   });
@@ -1970,12 +1968,12 @@ function updateGasLockButtons(){
   const lockBtn=document.getElementById('gas-lock-btn');
   const releaseBtn=document.getElementById('gas-release-btn');
   if(lockBtn){
-    lockBtn.style.display=isGasLockRequired()?'inline-flex':'none';
+    lockBtn.style.display='none';
     lockBtn.disabled=gasLockBusy||gasLockState.hasLock;
     lockBtn.innerHTML=gasLockBusy?'<i class="ti ti-loader"></i> 取得中':gasLockState.hasLock?'<i class="ti ti-lock-open"></i> 編輯中':'<i class="ti ti-lock-open"></i> 開始編輯';
   }
   if(releaseBtn){
-    releaseBtn.style.display=isGasLockRequired()&&gasLockState.hasLock?'inline-flex':'none';
+    releaseBtn.style.display='none';
     releaseBtn.disabled=gasLockBusy;
   }
 }
@@ -2006,7 +2004,7 @@ function updateGasStatus(){
       setGasStatus(`目前由 ${gasLockState.lock.ownerName||'另一位旅伴'} 編輯中，預計鎖定到 ${gasLockTimeText(gasLockState.lock)}。你現在看到的是唯讀畫面。${last}`,'sync');
       return;
     }
-    setGasStatus(`Google Drive JSON 已連線：${currentTripId}。按「開始編輯」取得 5 分鐘編輯鎖，編輯中會自動續約。${last}`,'sync');
+    setGasStatus(`Google Drive JSON 已連線：${currentTripId}。要看雲端最新版請按「下載 JSON 到畫面」；要分享目前畫面請按「上傳畫面到 JSON」。${last}`,'sync');
     return;
   }
   setGasStatus(`Google Drive JSON 同步中：${currentTripId}（${who}）${last}`,'ok');
@@ -2190,7 +2188,7 @@ async function loadGasTrip({silent=false}={}){
         updateGasStatus();
         return null;
       }
-      setGasStatus(canEdit()?'雲端尚未建立這個旅程。若要把目前本機旅程放到 Drive，請按「建立/儲存雲端」。':'雲端找不到這個旅程；請確認連結的 tripId 是否正確，或請共編者先建立雲端旅程。','sync');
+      setGasStatus(canEdit()?'雲端尚未建立這個旅程。若要把目前畫面放到 Drive，請按「上傳畫面到 JSON」。':'雲端找不到這個旅程；請確認連結的 tripId 是否正確，或請共編者先建立雲端旅程。','sync');
       return null;
     }
     const remoteUpdated=remote.updatedAt||data.updatedAt||'';
@@ -2332,7 +2330,7 @@ function enableGasSyncFromModal(){
   replaceUrlForCurrentTrip();
   updateAccessUI();
   startGasPolling();
-  setGasStatus(`已連線 Google Drive JSON 設定：${currentTripId}。目前不會自動覆蓋畫面；要把本機資料放上去請按「開始編輯」後按「上傳目前畫面」。`,'sync');
+  setGasStatus(`已連接 Google Drive JSON：${currentTripId}。目前不會自動覆蓋畫面；要把目前畫面放上去請按「上傳畫面到 JSON」。`,'sync');
 }
 function disableGasSync(){
   clearInterval(gasPollTimer);
