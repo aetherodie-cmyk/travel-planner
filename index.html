@@ -1614,7 +1614,7 @@ const params=new URLSearchParams(location.search);
 const CLOUD_CONFIG_KEY='tp_cloud_config';
 const GAS_SYNC_KEY='tp_gas_sync_config';
 const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/';
-const APP_VERSION='20260623-lock-modal';
+const APP_VERSION='20260623-stable-lock';
 function sanitizeTripId(value){
   return String(value||'local-default').trim().replace(/[^\w-]/g,'-').slice(0,48)||'local-default';
 }
@@ -1644,6 +1644,10 @@ let gasPendingConflict=null;
 let gasLockState={lock:null,hasLock:false,checked:false};
 let gasLockBusy=false;
 let gasOperationDepth=0;
+let gasLockRenewTroubleSince=0;
+let gasLockRequestSeq=0;
+let gasLockRenewInFlight=false;
+const GAS_LOCK_GRACE_MS=30000;
 let gasAutoLoadRemote=params.get('sync')==='gas';
 function gasDeviceId(){
   let id=localStorage.getItem('tp_gas_device_id');
@@ -1658,6 +1662,10 @@ function isGasLockRequired(){
 }
 function gasLockIsMine(lock=gasLockState.lock){
   return !!lock&&lock.ownerId===gasDeviceId()&&(!lock.expiresAt||new Date(lock.expiresAt).getTime()>Date.now());
+}
+function gasLockExpiresAt(lock=gasLockState.lock){
+  const t=lock?.expiresAt?new Date(lock.expiresAt).getTime():0;
+  return Number.isFinite(t)?t:0;
 }
 function canEdit(){return accessMode==='edit'&&(!isGasLockRequired()||gasLockState.hasLock);}
 function requireEdit(action='修改行程'){
@@ -2047,11 +2055,32 @@ function applyTripModalIdentity(){
   updateAccessUI();
 }
 function applyGasLockMeta(lock){
+  const incomingMine=gasLockIsMine(lock);
+  const incomingOther=!!lock?.ownerId&&lock.ownerId!==gasDeviceId();
+  if(gasLockState.hasLock&&!incomingMine&&!incomingOther){
+    const expiresAt=gasLockExpiresAt();
+    if(expiresAt&&Date.now()<=expiresAt+GAS_LOCK_GRACE_MS){
+      gasLockState.checked=true;
+      updateAccessUI();
+      updateGasLockButtons();
+      return;
+    }
+  }
   gasLockState.lock=lock||null;
-  gasLockState.hasLock=gasLockIsMine(lock);
+  gasLockState.hasLock=incomingMine;
+  if(incomingMine)gasLockRenewTroubleSince=0;
   gasLockState.checked=true;
   updateAccessUI();
   updateGasLockButtons();
+}
+function loseGasLock(lock=null){
+  gasLockRenewTroubleSince=0;
+  gasLockState={lock:lock||null,hasLock:false,checked:true};
+  accessMode='view';
+  replaceUrlForCurrentTrip();
+  updateAccessUI();
+  renderSidebar();
+  updateGasStatus();
 }
 function gasLockTimeText(lock=gasLockState.lock){
   if(!lock?.expiresAt)return '';
@@ -2111,6 +2140,10 @@ function updateGasStatus(){
   const last=gasLastRemoteUpdatedAt?`，遠端更新：${new Date(gasLastRemoteUpdatedAt).toLocaleString('zh-TW')}`:'';
   if(isGasLockRequired()){
     if(gasLockState.hasLock){
+      if(gasLockRenewTroubleSince){
+        setGasStatus(`你仍在編輯雲端正本：${currentTripId}（${who}）。雲端續約暫時沒有回應，系統會自動重試；在鎖定時間真正過期前不會中斷編輯。${last}`,'sync');
+        return;
+      }
       setGasStatus(`你正在編輯雲端正本：${currentTripId}（${who}）。系統會自動儲存與續約，目前鎖到 ${gasLockTimeText()}。完成後請按上方「儲存並結束」。${last}`,'ok');
       return;
     }
@@ -2179,20 +2212,26 @@ function gasJsonp(action,extra={}){
 async function gasLockAction(action,{silent=false}={}){
   if(!gasSyncConfig.url){setGasStatus('請先填入 Apps Script Web App URL。','err');return null;}
   if(!gasSyncConfig.token){setGasStatus('請設定編輯 Token。','err');return null;}
+  const seq=++gasLockRequestSeq;
+  const showBusy=!silent;
   try{
-    gasLockBusy=true;
-    updateGasLockButtons();
+    if(showBusy){
+      gasLockBusy=true;
+      updateGasLockButtons();
+    }
     const data=await gasJsonp(action,{
       token:gasSyncConfig.token,
       actor:gasSyncConfig.actor||'匿名旅伴',
       ownerId:gasDeviceId()
     });
+    if(seq!==gasLockRequestSeq)return null;
     applyGasLockMeta(data.meta?.lock||null);
     if(data.meta?.revision)gasLastRemoteRevision=data.meta.revision;
     updateGasStatus();
     return data;
   }catch(e){
-    if(e.data?.meta?.lock){
+    if(seq!==gasLockRequestSeq)return null;
+    if(e.data?.meta?.lock&&(action!=='renewLock'||e.data.locked||e.data.expired)){
       applyGasLockMeta(e.data.meta.lock);
       if(e.data.locked&&action==='acquireLock'){
         const msg=gasLockNotice(e.data.meta.lock);
@@ -2204,8 +2243,10 @@ async function gasLockAction(action,{silent=false}={}){
     if(!silent)setGasStatus(`${action==='acquireLock'?'取得編輯鎖':action==='renewLock'?'續約編輯鎖':'釋放編輯鎖'}失敗：${e.message}`,'err');
     return e.data||null;
   }finally{
-    gasLockBusy=false;
-    updateGasLockButtons();
+    if(showBusy&&seq===gasLockRequestSeq){
+      gasLockBusy=false;
+      updateGasLockButtons();
+    }
   }
 }
 async function acquireGasLock({silent=false}={}){
@@ -2237,14 +2278,37 @@ async function acquireGasLock({silent=false}={}){
 }
 async function renewGasLock({silent=true}={}){
   if(!gasSyncEnabled||!gasSyncConfig.url||!gasLockState.hasLock)return null;
-  const data=await gasLockAction('renewLock',{silent});
-  if(!data?.ok){
-    gasLockState.hasLock=false;
-    updateAccessUI();
-    renderSidebar();
-    updateGasStatus();
+  if(gasLockRenewInFlight)return null;
+  gasLockRenewInFlight=true;
+  try{
+    const data=await gasLockAction('renewLock',{silent});
+    if(data?.ok){
+      gasLockRenewTroubleSince=0;
+      updateGasStatus();
+      return data;
+    }
+    if(data?.locked){
+      loseGasLock(data.meta?.lock||null);
+      if(!silent)showLockNotice(data.meta?.lock);
+      return data;
+    }
+    if(data?.expired){
+      loseGasLock(data.meta?.lock||null);
+      if(!silent)showToast('編輯鎖已過期，請重新按「開始編輯」。',5000);
+      return data;
+    }
+    const expiresAt=gasLockExpiresAt();
+    if(!gasLockRenewTroubleSince)gasLockRenewTroubleSince=Date.now();
+    if(expiresAt&&Date.now()>expiresAt+GAS_LOCK_GRACE_MS){
+      loseGasLock(gasLockState.lock);
+      showToast('雲端編輯鎖已超過續約時間，請重新按「開始編輯」。',5500);
+    }else{
+      updateGasStatus();
+    }
+    return data;
+  }finally{
+    gasLockRenewInFlight=false;
   }
-  return data;
 }
 async function releaseGasLock({silent=false}={}){
   collectGasInputs();
@@ -3235,6 +3299,10 @@ function renderSpotList(){
         </div>
       </div>`;
     const si=card.querySelector('.spot-item');
+    si.onclick=e=>{
+      if(e.target.closest('button')||e.target.closest('.timeline-box'))return;
+      if(!canEdit())openInfoModal(spot.id);
+    };
     if(canEdit()){
       si.addEventListener('dragstart',e=>{if(e.dataTransfer.types[0]==='text/plain'&&tabDragSrc!==null)return;dragSrc=i;si.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('spot','1');});
       si.addEventListener('dragend',()=>si.classList.remove('dragging'));
