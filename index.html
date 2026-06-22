@@ -1259,7 +1259,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         <label>Apps Script Web App URL</label>
         <input id="gas-url-input" placeholder="貼上部署後的 /exec 網址"/>
       </div>
-      <div class="trip-help"><b>雲端旅程：</b>Apps Script URL 是 APP 讀寫 Google Drive JSON 的入口；Token 是簡單的編輯密碼。下載會用 Drive JSON 覆蓋目前畫面；上傳會把目前畫面寫回 Drive JSON。</div>
+      <div class="trip-help"><b>雲端正本：</b>Apps Script URL 是 APP 讀寫 Google Drive JSON 的入口；Token 是簡單的編輯密碼。開啟雲端正本會載入 Drive JSON；開始編輯後才會寫回雲端。</div>
       <div class="trip-form-grid">
         <div class="trip-form-field">
           <label>你的暱稱</label>
@@ -1271,12 +1271,14 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-        <button class="trip-action-btn" id="gas-enable-btn"><i class="ti ti-plug-connected"></i> 連接 Drive JSON</button>
-        <button class="trip-action-btn secondary" id="gas-load-btn"><i class="ti ti-download"></i> 下載 JSON 到畫面</button>
-        <button class="trip-action-btn secondary" id="gas-save-btn"><i class="ti ti-upload"></i> 上傳畫面到 JSON</button>
+        <button class="trip-action-btn" id="gas-enable-btn"><i class="ti ti-cloud-download"></i> 開啟雲端正本</button>
+        <button class="trip-action-btn secondary" id="gas-save-btn"><i class="ti ti-cloud-upload"></i> 用目前畫面建立雲端正本</button>
+        <button class="trip-action-btn secondary" id="gas-local-copy-btn"><i class="ti ti-copy"></i> 另存本機副本</button>
         <button class="trip-action-btn danger" id="gas-disable-btn"><i class="ti ti-cloud-off"></i> 斷開雲端</button>
+        <button class="trip-action-btn secondary" id="gas-load-btn" style="display:none"><i class="ti ti-download"></i> 下載 JSON 到畫面</button>
         <button class="trip-action-btn" id="gas-lock-btn" style="display:none"><i class="ti ti-lock-open"></i> 開始編輯</button>
         <button class="trip-action-btn secondary" id="gas-release-btn" style="display:none"><i class="ti ti-lock"></i> 完成編輯</button>
+        <button class="trip-action-btn secondary" id="gas-abandon-btn" style="display:none"><i class="ti ti-rotate"></i> 放棄本次編輯</button>
       </div>
       <div class="cloud-status" id="gas-status">尚未啟用。適合先 2 人共編；純檢視連結可讀取，本機編輯需有 token。</div>
       <div style="display:none">
@@ -1745,9 +1747,12 @@ function updateAccessUI(){
     btn.classList.toggle('edit',canEdit());
     btn.classList.toggle('view',!canEdit());
     btn.querySelector('i').className=canEdit()?'ti ti-lock-open':isGasLockRequired()?'ti ti-lock':'ti ti-eye';
+    btn.title=isGasLockRequired()
+      ? (canEdit()?'儲存到雲端並結束本次編輯':'取得雲端編輯權')
+      : '切換純檢視 / 可編輯模式';
   }
   if(lbl){
-    if(isGasLockRequired())lbl.textContent=canEdit()?'編輯中':'開始編輯';
+    if(isGasLockRequired())lbl.textContent=canEdit()?'儲存並結束':'開始編輯';
     else lbl.textContent=canEdit()?'可編輯':'純檢視';
   }
   const tripLbl=document.getElementById('trip-id-label');
@@ -1755,7 +1760,7 @@ function updateAccessUI(){
 }
 function toggleAccessMode(){
   if(isGasLockRequired()){
-    if(gasLockState.hasLock)releaseGasLock();
+    if(gasLockState.hasLock)saveAndReleaseGasEdit();
     else acquireGasLock();
     return;
   }
@@ -1790,6 +1795,7 @@ function saveLocal(){
     writeTripStore(store);
     localStorage.setItem('tp_v5',JSON.stringify({days,activeDay,orsApiKey,useApiKey}));
     if(cloudEnabled&&canEdit()&&!cloudApplying)scheduleCloudSave();
+    if(gasSyncEnabled&&gasLockState.hasLock&&canEdit()&&!gasApplying)scheduleGasSave();
   }catch(e){}
 }
 function loadLocal(){
@@ -1953,6 +1959,20 @@ function collectGasInputs(){
   writeGasConfig(config);
   return gasSyncConfig;
 }
+function applyTripModalIdentity(){
+  const titleInput=document.getElementById('trip-title-input');
+  const idInput=document.getElementById('trip-id-input');
+  if(titleInput)currentTripTitle=titleInput.value.trim()||currentTripTitle||'未命名旅程';
+  if(idInput){
+    const nextId=sanitizeTripId(idInput.value||currentTripId);
+    if(nextId&&nextId!==currentTripId){
+      currentTripId=nextId;
+      localStorage.setItem('tp_active_trip_id',currentTripId);
+    }
+  }
+  replaceUrlForCurrentTrip();
+  updateAccessUI();
+}
 function applyGasLockMeta(lock){
   gasLockState.lock=lock||null;
   gasLockState.hasLock=gasLockIsMine(lock);
@@ -1967,6 +1987,7 @@ function gasLockTimeText(lock=gasLockState.lock){
 function updateGasLockButtons(){
   const lockBtn=document.getElementById('gas-lock-btn');
   const releaseBtn=document.getElementById('gas-release-btn');
+  const abandonBtn=document.getElementById('gas-abandon-btn');
   if(lockBtn){
     lockBtn.style.display='none';
     lockBtn.disabled=gasLockBusy||gasLockState.hasLock;
@@ -1975,6 +1996,10 @@ function updateGasLockButtons(){
   if(releaseBtn){
     releaseBtn.style.display='none';
     releaseBtn.disabled=gasLockBusy;
+  }
+  if(abandonBtn){
+    abandonBtn.style.display=isGasLockRequired()&&gasLockState.hasLock?'inline-flex':'none';
+    abandonBtn.disabled=gasLockBusy;
   }
 }
 function setGasStatus(text,type=''){
@@ -1986,7 +2011,7 @@ function setGasStatus(text,type=''){
 function updateGasStatus(){
   updateGasLockButtons();
   if(!gasSyncEnabled){
-    setGasStatus('尚未啟用。適合先 2 人共編；純檢視連結可讀取，本機編輯需有 token。');
+    setGasStatus('尚未開啟雲端正本。本機旅程只存在這台裝置；要共用請先開啟或建立 Drive JSON。');
     return;
   }
   if(canEdit()&&!gasSyncConfig.token){
@@ -1997,14 +2022,14 @@ function updateGasStatus(){
   const last=gasLastRemoteUpdatedAt?`，遠端更新：${new Date(gasLastRemoteUpdatedAt).toLocaleString('zh-TW')}`:'';
   if(isGasLockRequired()){
     if(gasLockState.hasLock){
-      setGasStatus(`你正在編輯：${currentTripId}（${who}）。鎖定會自動續約，目前到 ${gasLockTimeText()}。完成後請按「完成編輯」。${last}`,'ok');
+      setGasStatus(`你正在編輯雲端正本：${currentTripId}（${who}）。系統會自動儲存與續約，目前鎖到 ${gasLockTimeText()}。完成後請按上方「儲存並結束」。${last}`,'ok');
       return;
     }
     if(gasLockState.lock){
       setGasStatus(`目前由 ${gasLockState.lock.ownerName||'另一位旅伴'} 編輯中，預計鎖定到 ${gasLockTimeText(gasLockState.lock)}。你現在看到的是唯讀畫面。${last}`,'sync');
       return;
     }
-    setGasStatus(`Google Drive JSON 已連線：${currentTripId}。要看雲端最新版請按「下載 JSON 到畫面」；要分享目前畫面請按「上傳畫面到 JSON」。${last}`,'sync');
+    setGasStatus(`已開啟雲端正本：${currentTripId}。目前是檢視狀態；要修改請按上方「開始編輯」。${last}`,'sync');
     return;
   }
   setGasStatus(`Google Drive JSON 同步中：${currentTripId}（${who}）${last}`,'ok');
@@ -2108,6 +2133,7 @@ async function renewGasLock({silent=true}={}){
 }
 async function releaseGasLock({silent=false}={}){
   collectGasInputs();
+  clearTimeout(gasSaveTimer);
   if(!gasSyncConfig.url||!gasSyncConfig.token)return null;
   const hadLock=gasLockState.hasLock;
   const data=await gasLockAction('releaseLock',{silent});
@@ -2119,6 +2145,22 @@ async function releaseGasLock({silent=false}={}){
   updateGasStatus();
   if(hadLock&&!silent)showToast('已完成編輯並釋放鎖');
   return data;
+}
+async function saveAndReleaseGasEdit(){
+  collectGasInputs();
+  if(!gasLockState.hasLock)return acquireGasLock();
+  clearTimeout(gasSaveTimer);
+  const saved=await saveGasTrip({silent:false});
+  if(!saved)return;
+  await releaseGasLock({silent:true});
+  showToast('已儲存雲端正本並結束編輯');
+}
+async function abandonGasEdit(){
+  if(!gasLockState.hasLock){showToast('目前沒有編輯鎖');return;}
+  if(!confirm('放棄本次編輯？目前畫面會重新載入雲端正本，未儲存的修改會留在本機歷史但不會寫回雲端。'))return;
+  await releaseGasLock({silent:true});
+  await loadGasTrip({silent:false});
+  showToast('已放棄編輯並回到雲端正本');
 }
 function gasStateSignature(trip){
   return stateSignature(trip);
@@ -2169,7 +2211,7 @@ function scheduleGasSave(){
     return;
   }
   clearTimeout(gasSaveTimer);
-  gasSaveTimer=setTimeout(()=>saveGasTrip({silent:true}),1200);
+  gasSaveTimer=setTimeout(()=>saveGasTrip({silent:true}),8000);
 }
 async function loadGasTrip({silent=false}={}){
   if(!gasSyncConfig.url)return setGasStatus('請先填入 Apps Script Web App URL。','err');
@@ -2286,6 +2328,7 @@ async function peekGasTrip(){
   }
 }
 async function uploadCurrentGasTrip(){
+  applyTripModalIdentity();
   collectGasInputs();
   if(!gasSyncConfig.url)return setGasStatus('請先填入 Apps Script Web App URL。','err');
   if(!gasSyncConfig.token)return setGasStatus('請設定編輯 Token，兩位共編者使用同一組即可。','err');
@@ -2295,6 +2338,7 @@ async function uploadCurrentGasTrip(){
     localStorage.setItem('tp_gas_enabled','1');
   }
   updateAccessUI();
+  const hadLock=gasLockState.hasLock;
   if(isGasLockRequired()&&!gasLockState.hasLock){
     const locked=await acquireGasLock({silent:false});
     if(!locked)return;
@@ -2308,10 +2352,42 @@ async function uploadCurrentGasTrip(){
       updateGasStatus();
       return;
     }
-    await saveGasTrip({force:true});
+    const saved=await saveGasTrip({force:true});
+    if(saved&&!hadLock)await releaseGasLock({silent:true});
+    if(saved)showToast('已建立 / 更新雲端正本');
   }catch(e){
     setGasStatus(`上傳失敗：${e.message}`,'err');
   }
+}
+async function openGasSourceTrip(){
+  applyTripModalIdentity();
+  collectGasInputs();
+  if(!gasSyncConfig.url)return setGasStatus('請先填入 Apps Script Web App URL。','err');
+  gasSyncEnabled=true;
+  gasAutoLoadRemote=true;
+  accessMode='view';
+  localStorage.setItem('tp_gas_enabled','1');
+  replaceUrlForCurrentTrip();
+  updateAccessUI();
+  startGasPolling();
+  const remote=await loadGasTrip({silent:false});
+  if(remote)showToast('已開啟雲端正本');
+}
+function saveLocalCopyFromCurrent(){
+  const stamp=new Date().toISOString().replace(/[-:T]/g,'').slice(0,12);
+  const copyId=sanitizeTripId(`${currentTripId}-local-${stamp}`);
+  const copy={
+    ...makeTripState(),
+    id:copyId,
+    title:`本機副本：${currentTripTitle||currentTripId}`,
+    updatedAt:new Date().toISOString()
+  };
+  const store=readTripStore();
+  store.trips=store.trips||{};
+  store.trips[copyId]=copy;
+  writeTripStore(store);
+  renderTripModal();
+  showToast('已另存本機副本');
 }
 function startGasPolling(){
   clearInterval(gasPollTimer);
@@ -2330,11 +2406,12 @@ function enableGasSyncFromModal(){
   replaceUrlForCurrentTrip();
   updateAccessUI();
   startGasPolling();
-  setGasStatus(`已連接 Google Drive JSON：${currentTripId}。目前不會自動覆蓋畫面；要把目前畫面放上去請按「上傳畫面到 JSON」。`,'sync');
+  setGasStatus(`已連接 Drive JSON 設定。若要讀取雲端正本，請按「開啟雲端正本」。`,'sync');
 }
 function disableGasSync(){
   clearInterval(gasPollTimer);
   gasPollTimer=null;
+  if(gasLockState.hasLock)releaseGasLock({silent:true});
   gasLockState={lock:null,hasLock:false,checked:false};
   gasSyncEnabled=false;
   localStorage.setItem('tp_gas_enabled','0');
@@ -4495,16 +4572,18 @@ document.getElementById('trip-modal-x').onclick=()=>document.getElementById('tri
 document.getElementById('trip-modal').onclick=e=>{if(e.target===document.getElementById('trip-modal'))document.getElementById('trip-modal').classList.remove('open');};
 document.getElementById('trip-save-btn').onclick=saveTripMeta;
 document.getElementById('trip-new-btn').onclick=createNewTrip;
-document.getElementById('copy-edit-url').onclick=()=>{collectGasInputs();copyText(tripUrl(currentTripId,'edit'));};
-document.getElementById('copy-view-url').onclick=()=>{collectGasInputs();copyText(tripUrl(currentTripId,'view'));};
-document.getElementById('gas-enable-btn').onclick=enableGasSyncFromModal;
+document.getElementById('copy-edit-url').onclick=()=>{applyTripModalIdentity();collectGasInputs();copyText(tripUrl(currentTripId,'edit'));};
+document.getElementById('copy-view-url').onclick=()=>{applyTripModalIdentity();collectGasInputs();copyText(tripUrl(currentTripId,'view'));};
+document.getElementById('gas-enable-btn').onclick=openGasSourceTrip;
 document.getElementById('gas-lock-btn').onclick=()=>{collectGasInputs();acquireGasLock();};
 document.getElementById('gas-load-btn').onclick=()=>{
   collectGasInputs();
-  if(confirm('要用雲端 JSON 覆蓋目前畫面嗎？如果這台有尚未上傳的修改，請先按「上傳目前畫面」。'))loadGasTrip();
+  if(confirm('要用雲端正本覆蓋目前畫面嗎？如果這台有尚未儲存的修改，請先完成編輯或另存本機副本。'))loadGasTrip();
 };
 document.getElementById('gas-save-btn').onclick=uploadCurrentGasTrip;
+document.getElementById('gas-local-copy-btn').onclick=saveLocalCopyFromCurrent;
 document.getElementById('gas-release-btn').onclick=()=>{collectGasInputs();releaseGasLock();};
+document.getElementById('gas-abandon-btn').onclick=abandonGasEdit;
 document.getElementById('gas-disable-btn').onclick=disableGasSync;
 document.getElementById('cloud-enable-btn').onclick=enableCloudFromModal;
 document.getElementById('cloud-disable-btn').onclick=disableCloud;
