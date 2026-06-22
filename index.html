@@ -1697,7 +1697,7 @@ function shareBaseUrl(){
   const isLocal=location.protocol==='file:'||['localhost','127.0.0.1',''].includes(location.hostname);
   return isLocal?PUBLIC_APP_URL:location.href;
 }
-function tripUrl(id=currentTripId,mode=accessMode,{cloud=cloudEnabled,sync=gasSyncEnabled}={}){
+function tripUrl(id=currentTripId,mode=accessMode,{cloud=cloudEnabled,sync=(gasSyncEnabled||!!gasSyncConfig.url)}={}){
   const url=new URL(shareBaseUrl());
   url.searchParams.set('trip',id);
   url.searchParams.set('mode',mode);
@@ -1810,6 +1810,7 @@ function loadLocal(){
 }
 
 function renderTripModal(){
+  hydrateGasInputs();
   document.getElementById('trip-title-input').value=currentTripTitle||'';
   document.getElementById('trip-id-input').value=currentTripId;
   const editUrl=tripUrl(currentTripId,'edit');
@@ -1818,7 +1819,6 @@ function renderTripModal(){
   document.getElementById('trip-view-url').textContent=viewUrl;
   const cloudRaw=localStorage.getItem(CLOUD_CONFIG_KEY)||'';
   document.getElementById('cloud-config-input').value=cloudRaw;
-  hydrateGasInputs();
   const list=document.getElementById('trip-list');
   const trips=listTrips();
   list.innerHTML=trips.length?'':'<div class="cloud-status">尚未建立其他旅程。</div>';
@@ -4497,8 +4497,8 @@ document.getElementById('trip-modal-x').onclick=()=>document.getElementById('tri
 document.getElementById('trip-modal').onclick=e=>{if(e.target===document.getElementById('trip-modal'))document.getElementById('trip-modal').classList.remove('open');};
 document.getElementById('trip-save-btn').onclick=saveTripMeta;
 document.getElementById('trip-new-btn').onclick=createNewTrip;
-document.getElementById('copy-edit-url').onclick=()=>copyText(tripUrl(currentTripId,'edit'));
-document.getElementById('copy-view-url').onclick=()=>copyText(tripUrl(currentTripId,'view'));
+document.getElementById('copy-edit-url').onclick=()=>{collectGasInputs();copyText(tripUrl(currentTripId,'edit'));};
+document.getElementById('copy-view-url').onclick=()=>{collectGasInputs();copyText(tripUrl(currentTripId,'view'));};
 document.getElementById('gas-enable-btn').onclick=enableGasSyncFromModal;
 document.getElementById('gas-lock-btn').onclick=()=>{collectGasInputs();acquireGasLock();};
 document.getElementById('gas-load-btn').onclick=()=>{
