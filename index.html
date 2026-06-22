@@ -1587,7 +1587,7 @@ const params=new URLSearchParams(location.search);
 const CLOUD_CONFIG_KEY='tp_cloud_config';
 const GAS_SYNC_KEY='tp_gas_sync_config';
 const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/';
-const APP_VERSION='20260622-trip-id-fix';
+const APP_VERSION='20260622-lock-notice';
 function sanitizeTripId(value){
   return String(value||'local-default').trim().replace(/[^\w-]/g,'-').slice(0,48)||'local-default';
 }
@@ -2007,6 +2007,11 @@ function gasLockTimeText(lock=gasLockState.lock){
   if(!lock?.expiresAt)return '';
   return new Date(lock.expiresAt).toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
 }
+function gasLockNotice(lock=gasLockState.lock){
+  const who=lock?.ownerName||'另一位旅伴';
+  const until=gasLockTimeText(lock);
+  return `${who} 編輯中${until?`，鎖定到 ${until}`:''}。你目前是唯讀，等對方儲存並結束或鎖自動過期後再試。`;
+}
 function updateGasLockButtons(){
   const lockBtn=document.getElementById('gas-lock-btn');
   const releaseBtn=document.getElementById('gas-release-btn');
@@ -2068,7 +2073,11 @@ async function parseGasResponse(res){
   let data=null;
   try{data=JSON.parse(text);}
   catch(e){throw new Error(`回應不是 JSON：${text.slice(0,120)}`);}
-  if(!res.ok||data.ok===false)throw new Error(data.error||`HTTP ${res.status}`);
+  if(!res.ok||data.ok===false){
+    const err=new Error(data.error||`HTTP ${res.status}`);
+    err.data=data;
+    throw err;
+  }
   return data;
 }
 function gasJsonp(action,extra={}){
@@ -2087,8 +2096,11 @@ function gasJsonp(action,extra={}){
     }
     window[cb]=(data)=>{
       cleanup();
-      if(!data||data.ok===false)reject(new Error(data?.error||'Apps Script 回傳失敗'));
-      else resolve(data);
+      if(!data||data.ok===false){
+        const err=new Error(data?.error||'Apps Script 回傳失敗');
+        err.data=data;
+        reject(err);
+      }else resolve(data);
     };
     const url=new URL(gasSyncConfig.url);
     url.searchParams.set('action',action);
@@ -2119,8 +2131,17 @@ async function gasLockAction(action,{silent=false}={}){
     updateGasStatus();
     return data;
   }catch(e){
+    if(e.data?.meta?.lock){
+      applyGasLockMeta(e.data.meta.lock);
+      if(e.data.locked&&action==='acquireLock'){
+        const msg=gasLockNotice(e.data.meta.lock);
+        setGasStatus(msg,'sync');
+        if(!silent)showToast(msg,6500);
+        return e.data;
+      }
+    }
     if(!silent)setGasStatus(`${action==='acquireLock'?'取得編輯鎖':action==='renewLock'?'續約編輯鎖':'釋放編輯鎖'}失敗：${e.message}`,'err');
-    return null;
+    return e.data||null;
   }finally{
     gasLockBusy=false;
     updateGasLockButtons();
@@ -2141,6 +2162,7 @@ async function acquireGasLock({silent=false}={}){
   }
   if(data?.meta?.lock)applyGasLockMeta(data.meta.lock);
   updateGasStatus();
+  if(data?.locked&&data.meta?.lock&&!silent)showToast(gasLockNotice(data.meta.lock),6500);
   return false;
 }
 async function renewGasLock({silent=true}={}){
