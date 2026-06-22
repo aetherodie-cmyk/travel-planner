@@ -1104,6 +1104,8 @@ body.mobile-ui #mobile-appbar{position:absolute;top:calc(env(safe-area-inset-top
 #mobile-actions-menu.open{display:block}
 .mobile-menu-item{padding:10px 12px;border-radius:8px;font-size:13px;color:#333;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap}
 .mobile-menu-item:hover{background:#F7FAF7;color:var(--primary-strong)}
+.mobile-menu-item.primary{background:var(--primary-soft);color:var(--primary-strong)}
+.mobile-menu-item.danger{background:#FFF5F5;color:var(--danger)}
 body.mobile-ui #mobile-fabs{position:absolute;right:16px;bottom:calc(var(--mobile-sheet-height, 480px) + 16px);z-index:1050;display:flex;flex-direction:column;gap:10px;transition:bottom .24s ease}
 body.mobile-ui.mobile-sheet-full #mobile-fabs{display:none}
 .mobile-fab{width:46px;height:46px;border:none;border-radius:50%;background:var(--surface);color:var(--primary);box-shadow:0 8px 22px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer}
@@ -1503,6 +1505,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
     <div id="mobile-actions-wrap">
       <button class="mobile-icon-btn" id="mobile-actions-btn" title="更多操作"><i class="ti ti-menu-2"></i></button>
       <div id="mobile-actions-menu">
+        <div class="mobile-menu-item primary" id="mobile-access-mode"><i class="ti ti-lock"></i> <span id="mobile-access-mode-label">開始編輯</span></div>
         <div class="mobile-menu-item" id="mobile-ui-mode-btn"><i class="ti ti-devices"></i> <span id="mobile-ui-mode-label">版面：自動</span></div>
         <div class="mobile-menu-item" id="mobile-trips"><i class="ti ti-folders"></i> 旅程管理</div>
         <div class="mobile-menu-item" id="mobile-load-json"><i class="ti ti-folder-open"></i> 載入行程 JSON</div>
@@ -1743,6 +1746,8 @@ function updateAccessUI(){
   document.getElementById('title-trip-name').textContent=currentTripTitle||'旅遊行程規劃';
   const btn=document.getElementById('access-mode-btn');
   const lbl=document.getElementById('access-mode-label');
+  const mobileAccess=document.getElementById('mobile-access-mode');
+  const mobileAccessLabel=document.getElementById('mobile-access-mode-label');
   if(btn){
     btn.classList.toggle('edit',canEdit());
     btn.classList.toggle('view',!canEdit());
@@ -1754,6 +1759,16 @@ function updateAccessUI(){
   if(lbl){
     if(isGasLockRequired())lbl.textContent=canEdit()?'儲存並結束':'開始編輯';
     else lbl.textContent=canEdit()?'可編輯':'純檢視';
+  }
+  if(mobileAccess){
+    mobileAccess.classList.toggle('primary',canEdit()||isGasLockRequired());
+    mobileAccess.classList.toggle('danger',false);
+    const icon=mobileAccess.querySelector('i');
+    if(icon)icon.className=canEdit()?'ti ti-lock-open':isGasLockRequired()?'ti ti-lock':'ti ti-eye';
+  }
+  if(mobileAccessLabel){
+    if(isGasLockRequired())mobileAccessLabel.textContent=canEdit()?'儲存並結束':'開始編輯';
+    else mobileAccessLabel.textContent=canEdit()?'切換純檢視':'切換可編輯';
   }
   const tripLbl=document.getElementById('trip-id-label');
   if(tripLbl)tripLbl.textContent=`${gasSyncEnabled?'Google Drive JSON':cloudEnabled?'雲端':'本機'}：${currentTripId}`;
@@ -4544,6 +4559,7 @@ document.getElementById('access-mode-btn').onclick=toggleAccessMode;
 document.getElementById('trip-name-btn').onclick=openTripModal;
 document.getElementById('trip-manager-btn').onclick=openTripModal;
 document.getElementById('mobile-ui-mode-btn').onclick=()=>{cycleUiMode();document.getElementById('mobile-actions-menu').classList.remove('open');};
+document.getElementById('mobile-access-mode').onclick=()=>{toggleAccessMode();document.getElementById('mobile-actions-menu').classList.remove('open');};
 document.getElementById('mobile-actions-btn').onclick=e=>{e.stopPropagation();document.getElementById('mobile-actions-menu').classList.toggle('open');};
 document.getElementById('mobile-trips').onclick=()=>{openTripModal();document.getElementById('mobile-actions-menu').classList.remove('open');};
 document.getElementById('mobile-load-json').onclick=()=>{loadJSONFile();document.getElementById('mobile-actions-menu').classList.remove('open');};
