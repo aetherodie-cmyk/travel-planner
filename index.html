@@ -938,7 +938,7 @@ body.view-only .empty-day small{display:none}
 #key-modal .modal-box{width:380px}
 #key-modal p{font-size:12px;color:#888;margin-bottom:12px;line-height:1.6}
 #key-modal a{color:#185FA5}
-#trip-modal .modal-box{width:560px;padding:0;overflow:hidden}
+#trip-modal .modal-box{width:min(760px,calc(100vw - 32px));padding:0;overflow:hidden}
 .trip-modal-body{padding:16px;max-height:70vh;overflow-y:auto}
 .trip-form-grid{display:grid;grid-template-columns:1.5fr 1fr auto;gap:8px;align-items:end;margin-bottom:12px}
 .trip-form-field label{display:block;font-size:11px;font-weight:800;color:var(--muted);margin-bottom:4px}
@@ -950,7 +950,15 @@ body.view-only .empty-day small{display:none}
 .trip-action-btn.secondary{border-color:var(--line);background:var(--surface);color:var(--muted)}
 .trip-action-btn.danger{border-color:#F0CACA;background:#FFF5F5;color:var(--danger)}
 .trip-section-title{font-size:12px;font-weight:900;color:var(--text);margin:14px 0 8px;display:flex;align-items:center;gap:6px}
+.trip-hub-card{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;margin-bottom:12px}
+.trip-hub-card.current{background:linear-gradient(180deg,#F6FBF7,#fff);border-color:#CFE8D3}
+.trip-hub-eyebrow{font-size:10px;font-weight:900;color:var(--primary-strong);margin-bottom:3px}
+.trip-hub-title{font-size:16px;font-weight:900;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trip-hub-meta{font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trip-hub-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
 .trip-url-box{border:1px solid var(--line-soft);border-radius:10px;background:#FAFBFA;padding:10px;margin-bottom:12px}
+.trip-url-box.cloud-share-box{margin-bottom:8px}
+.trip-url-title{font-size:11px;font-weight:900;color:var(--text);margin-bottom:8px}
 .trip-help{font-size:11px;line-height:1.5;color:var(--muted);background:#FAFBFA;border:1px solid var(--line-soft);border-radius:10px;padding:9px 10px;margin:8px 0 12px}
 .trip-help b{color:var(--text)}
 .trip-url-row{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:7px;align-items:center;margin-bottom:7px}
@@ -958,11 +966,14 @@ body.view-only .empty-day small{display:none}
 .trip-url-label{font-size:11px;font-weight:900;color:var(--muted)}
 .trip-url-text{font-size:11px;color:#185FA5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#fff;border:1px solid var(--line-soft);border-radius:7px;padding:6px 8px}
 .trip-list{display:flex;flex-direction:column;gap:7px}
+.trip-list.cloud{margin-bottom:12px}
 .trip-row{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
 .trip-row.active{border-color:var(--primary);background:var(--primary-soft)}
+.trip-row.cloud-trip{border-color:#D5E3F3;background:#F8FBFF}
+.trip-row.cloud-trip.active{border-color:#378ADD;background:#EFF6FD}
 .trip-row-title{font-size:13px;font-weight:900;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .trip-row-meta{font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.trip-row-actions{display:flex;gap:6px;align-items:center}
+.trip-row-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
 .cloud-status{font-size:12px;line-height:1.5;color:var(--muted);border:1px solid var(--line-soft);border-radius:10px;background:#FAFBFA;padding:9px 10px;margin-top:8px}
 .cloud-status.ok{color:#0F6E56;background:#F0F8F2;border-color:#CFE8D3}
 .cloud-status.err{color:var(--danger);background:#FFF5F5;border-color:#F0CACA}
@@ -1233,6 +1244,16 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
       <button class="modal-x" id="trip-modal-x">×</button>
     </div>
     <div class="trip-modal-body">
+      <div class="trip-hub-card current">
+        <div>
+          <div class="trip-hub-eyebrow">目前開啟</div>
+          <div class="trip-hub-title" id="trip-current-title">旅遊行程規劃</div>
+          <div class="trip-hub-meta" id="trip-current-meta">本機旅程</div>
+        </div>
+        <div class="trip-hub-actions">
+          <button class="trip-action-btn secondary" id="trip-export-current-btn"><i class="ti ti-file-export"></i> 匯出 JSON</button>
+        </div>
+      </div>
       <div class="trip-form-grid">
         <div class="trip-form-field">
           <label>旅行名稱</label>
@@ -1244,10 +1265,13 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         </div>
         <button class="trip-action-btn" id="trip-save-btn"><i class="ti ti-device-floppy"></i> 儲存</button>
       </div>
-      <div class="trip-url-box">
-        <div class="trip-help" style="margin-top:0">
-          <b>分享連結：</b>把下方連結傳給旅伴。若已設定 Apps Script URL，連結會讀取 Google Drive 裡的 JSON；檢視連結只讀，編輯連結仍需要 Token。
-        </div>
+      <div class="trip-section-title" style="justify-content:space-between">
+        <span><i class="ti ti-cloud"></i> 雲端共編行程</span>
+        <button class="trip-action-btn secondary" id="gas-list-btn"><i class="ti ti-refresh"></i> 重新整理清單</button>
+      </div>
+      <div class="trip-help"><b>雲端共編：</b>這裡列出 Google Drive JSON 裡的行程。檢視只讀；要修改需按「開始編輯」取得鎖。未填 Apps Script URL 時不會連到你的雲端。</div>
+      <div class="trip-url-box cloud-share-box">
+        <div class="trip-url-title">目前旅程分享連結</div>
         <div class="trip-url-row">
           <div class="trip-url-label">編輯</div>
           <div class="trip-url-text" id="trip-edit-url"></div>
@@ -1259,18 +1283,24 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
           <button class="trip-action-btn secondary" id="copy-view-url"><i class="ti ti-copy"></i> 複製檢視</button>
         </div>
       </div>
-      <div class="trip-section-title" style="justify-content:space-between">
-        <span><i class="ti ti-device-desktop"></i> 本機旅程（只在這台裝置）</span>
-        <button class="trip-action-btn secondary" id="trip-new-btn"><i class="ti ti-plus"></i> 新增旅程</button>
+      <div class="trip-list cloud" id="gas-trip-list">
+        <div class="cloud-status">尚未連接雲端。填入 Apps Script Web App URL 後，可讀取 Google Drive JSON 行程清單。</div>
       </div>
-      <div class="trip-help"><b>本機旅程：</b>只存在這台電腦 / 手機的瀏覽器。按「本機開啟」只是切換目前畫面，不會自動上傳，也不會讓別人看到這台裝置的本機資料。</div>
+      <div class="trip-section-title" style="justify-content:space-between">
+        <span><i class="ti ti-device-desktop"></i> 本機單機行程</span>
+        <span style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="trip-action-btn secondary" id="copy-standalone-url"><i class="ti ti-copy"></i> 複製單機版連結</button>
+          <button class="trip-action-btn secondary" id="trip-new-btn"><i class="ti ti-plus"></i> 新增旅程</button>
+        </span>
+      </div>
+      <div class="trip-help"><b>單機版：</b>只存在這台電腦 / 手機的瀏覽器，不會自動上傳，也不會讓別人看到。適合給旅伴測試或用 JSON 檔交換意見。</div>
       <div class="trip-list" id="trip-list"></div>
-      <div class="trip-section-title"><i class="ti ti-cloud"></i> Google Drive JSON 共編</div>
+      <div class="trip-section-title"><i class="ti ti-settings"></i> Google Drive JSON 設定</div>
       <div class="trip-form-field">
         <label>Apps Script Web App URL</label>
         <input id="gas-url-input" placeholder="貼上部署後的 /exec 網址"/>
       </div>
-      <div class="trip-help"><b>雲端正本：</b>Apps Script URL 是 APP 讀寫 Google Drive JSON 的入口；Token 是簡單的編輯密碼。開啟雲端正本會載入 Drive JSON；開始編輯後才會寫回雲端。</div>
+      <div class="trip-help"><b>雲端設定：</b>Apps Script URL 是 APP 讀寫 Google Drive JSON 的入口；Token 是簡單的編輯密碼。單機測試者不填這裡，就不會碰到你的雲端資料。</div>
       <div class="trip-form-grid">
         <div class="trip-form-field">
           <label>你的暱稱</label>
@@ -1614,7 +1644,7 @@ const params=new URLSearchParams(location.search);
 const CLOUD_CONFIG_KEY='tp_cloud_config';
 const GAS_SYNC_KEY='tp_gas_sync_config';
 const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/';
-const APP_VERSION='20260623-stable-lock';
+const APP_VERSION='20260623-trip-hub';
 function sanitizeTripId(value){
   return String(value||'local-default').trim().replace(/[^\w-]/g,'-').slice(0,48)||'local-default';
 }
@@ -1649,6 +1679,8 @@ let gasLockRequestSeq=0;
 let gasLockRenewInFlight=false;
 const GAS_LOCK_GRACE_MS=30000;
 let gasAutoLoadRemote=params.get('sync')==='gas';
+let gasTripListCache=[];
+let gasTripListLoaded=false;
 function gasDeviceId(){
   let id=localStorage.getItem('tp_gas_device_id');
   if(!id){
@@ -1738,6 +1770,25 @@ function applyTripState(trip,{persist=true,render=true}={}){
 function listTrips(){
   const store=readTripStore();
   return Object.values(store.trips||{}).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
+}
+function tripSummary(trip){
+  const d=trip?.data||trip||{};
+  const dayCount=(d.days||[]).length||0;
+  const spotCount=(d.days||[]).reduce((s,day)=>s+(day.spots?.length||0),0);
+  const updated=trip?.updatedAt?new Date(trip.updatedAt).toLocaleString('zh-TW'):'未更新';
+  return `${dayCount} 天 · ${spotCount} 個景點 · ${updated}`;
+}
+function setStandaloneMode(){
+  clearInterval(gasPollTimer);
+  gasPollTimer=null;
+  gasSyncEnabled=false;
+  gasAutoLoadRemote=false;
+  gasLockState={lock:null,hasLock:false,checked:false};
+  localStorage.setItem('tp_gas_enabled','0');
+  if(cloudUnsub){cloudUnsub();cloudUnsub=null;}
+  cloudEnabled=false;
+  cloudDocRef=null;
+  localStorage.setItem('tp_cloud_enabled','0');
 }
 function shareBaseUrl(){
   const isLocal=location.protocol==='file:'||['localhost','127.0.0.1',''].includes(location.hostname);
@@ -1902,6 +1953,14 @@ function renderTripModal(){
   hydrateGasInputs();
   document.getElementById('trip-title-input').value=currentTripTitle||'';
   document.getElementById('trip-id-input').value=currentTripId;
+  const currentMeta=document.getElementById('trip-current-meta');
+  const currentTitle=document.getElementById('trip-current-title');
+  if(currentTitle)currentTitle.textContent=currentTripTitle||currentTripId;
+  if(currentMeta){
+    const state=makeTripState();
+    const source=gasSyncEnabled?'雲端共編正本':'本機單機';
+    currentMeta.textContent=`${source} · ${currentTripId} · ${tripSummary(state)}`;
+  }
   const editUrl=tripUrl(currentTripId,'edit');
   const viewUrl=tripUrl(currentTripId,'view');
   document.getElementById('trip-edit-url').textContent=editUrl;
@@ -1912,28 +1971,31 @@ function renderTripModal(){
   const trips=listTrips();
   list.innerHTML=trips.length?'':'<div class="cloud-status">尚未建立其他旅程。</div>';
   trips.forEach(trip=>{
-    const total=(trip.data?.days||[]).reduce((s,d)=>s+(d.spots?.length||0),0);
     const row=document.createElement('div');
     row.className='trip-row'+(trip.id===currentTripId?' active':'');
     row.innerHTML=`
       <div>
         <div class="trip-row-title">${esc(trip.title||'未命名旅程')}</div>
-        <div class="trip-row-meta">${esc(trip.id)} · ${(trip.data?.days||[]).length||0} 天 · ${total} 個景點 · ${trip.updatedAt?new Date(trip.updatedAt).toLocaleString('zh-TW'):''}</div>
+        <div class="trip-row-meta">${esc(trip.id)} · ${tripSummary(trip)}</div>
       </div>
       <div class="trip-row-actions">
         <button class="trip-action-btn secondary" data-action="open"><i class="ti ti-folder-open"></i> 本機開啟</button>
+        <button class="trip-action-btn secondary" data-action="export"><i class="ti ti-file-export"></i> 匯出</button>
         <button class="trip-action-btn danger" data-action="delete"><i class="ti ti-trash"></i></button>
       </div>`;
     row.querySelector('[data-action="open"]').onclick=()=>switchTrip(trip.id);
+    row.querySelector('[data-action="export"]').onclick=()=>exportTripById(trip.id);
     row.querySelector('[data-action="delete"]').onclick=()=>deleteTrip(trip.id);
     list.appendChild(row);
   });
+  renderGasTripList();
   updateGasStatus();
   updateCloudStatus();
 }
 function openTripModal(){
   renderTripModal();
   document.getElementById('trip-modal').classList.add('open');
+  if(gasSyncConfig.url)refreshGasTripList({silent:true});
 }
 function saveTripMeta(){
   if(!requireEdit('儲存旅程設定'))return;
@@ -1959,9 +2021,11 @@ function saveTripMeta(){
   showToast('旅程設定已儲存');
 }
 function createNewTrip(){
-  if(!requireEdit('新增旅程'))return;
+  if(gasSyncEnabled&&gasLockState.hasLock&&!confirm('目前正在編輯雲端正本。建立本機旅程會切到單機模式，請確認雲端已儲存完成。要繼續嗎？'))return;
   const title=prompt('新旅行名稱：','新的旅行');
   if(!title)return;
+  setStandaloneMode();
+  accessMode='edit';
   currentTripTitle=title.trim()||'新的旅行';
   currentTripId=sanitizeTripId(`${currentTripTitle}-${new Date().toISOString().slice(0,10)}`);
   resetTripData();
@@ -1971,23 +2035,25 @@ function createNewTrip(){
   renderSidebar();
   renderMarkers();
   renderTripModal();
-  if(cloudEnabled)initCloudSync();
-  if(gasSyncEnabled){startGasPolling();updateGasStatus();}
+  updateAccessUI();
+  updateGasStatus();
 }
 function switchTrip(id){
+  if(gasSyncEnabled&&gasLockState.hasLock&&!confirm('目前正在編輯雲端正本。切換到本機旅程會離開雲端編輯狀態，請確認雲端已儲存完成。要繼續嗎？'))return;
   const store=readTripStore();
   const trip=store.trips?.[id];
   if(!trip){showToast('找不到這個旅程');return;}
+  setStandaloneMode();
+  accessMode='edit';
   currentTripId=id;
   applyTripState(trip,{persist:false,render:true});
   localStorage.setItem('tp_active_trip_id',currentTripId);
   replaceUrlForCurrentTrip();
   renderTripModal();
-  if(cloudEnabled)initCloudSync();
-  if(gasSyncEnabled){startGasPolling();updateGasStatus();}
+  updateAccessUI();
+  updateGasStatus();
 }
 function deleteTrip(id){
-  if(!requireEdit('刪除旅程'))return;
   if(id===currentTripId){showToast('目前開啟中的旅程不能刪除');return;}
   const store=readTripStore();
   const trip=store.trips?.[id];
@@ -1995,6 +2061,95 @@ function deleteTrip(id){
   if(!confirm(`確定刪除「${trip.title||id}」？這只會刪除本機紀錄，不會刪除雲端資料。`))return;
   delete store.trips[id];
   writeTripStore(store);
+  renderTripModal();
+}
+function exportTripById(id){
+  const store=readTripStore();
+  const trip=store.trips?.[id];
+  if(!trip){showToast('找不到這個旅程');return;}
+  const blob=new Blob([JSON.stringify(trip,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`travel-planner-${sanitizeTripId(id)}.json`;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function renderGasTripList(){
+  const list=document.getElementById('gas-trip-list');
+  if(!list)return;
+  if(!gasSyncConfig.url){
+    list.innerHTML='<div class="cloud-status">尚未連接雲端。填入 Apps Script Web App URL 後，可讀取 Google Drive JSON 行程清單。</div>';
+    return;
+  }
+  if(!gasTripListLoaded){
+    list.innerHTML='<div class="cloud-status sync">已設定 Apps Script URL。按「重新整理清單」查看雲端行程。</div>';
+    return;
+  }
+  if(!gasTripListCache.length){
+    list.innerHTML='<div class="cloud-status">雲端目前沒有行程。可用下方「用目前畫面建立雲端正本」建立第一個。</div>';
+    return;
+  }
+  list.innerHTML='';
+  gasTripListCache.forEach(meta=>{
+    const id=sanitizeTripId(meta.tripId||meta.id||'');
+    if(!id)return;
+    const row=document.createElement('div');
+    row.className='trip-row cloud-trip'+(id===currentTripId&&gasSyncEnabled?' active':'');
+    const lock=meta.lock?` · ${esc(meta.lock.ownerName||'旅伴')} 編輯中`:'';
+    const updated=meta.updatedAt?new Date(meta.updatedAt).toLocaleString('zh-TW'):'未更新';
+    row.innerHTML=`
+      <div>
+        <div class="trip-row-title">${esc(meta.title||id)}</div>
+        <div class="trip-row-meta">${esc(id)} · ${esc(updated)}${lock}</div>
+      </div>
+      <div class="trip-row-actions">
+        <button class="trip-action-btn secondary" data-action="view"><i class="ti ti-eye"></i> 檢視</button>
+        <button class="trip-action-btn" data-action="edit"><i class="ti ti-lock-open"></i> 開始編輯</button>
+        <button class="trip-action-btn secondary" data-action="copy-view"><i class="ti ti-copy"></i> 檢視連結</button>
+        <button class="trip-action-btn secondary" data-action="copy-edit"><i class="ti ti-copy"></i> 編輯連結</button>
+      </div>`;
+    row.querySelector('[data-action="view"]').onclick=()=>openGasTrip(id,'view');
+    row.querySelector('[data-action="edit"]').onclick=()=>openGasTrip(id,'edit');
+    row.querySelector('[data-action="copy-view"]').onclick=()=>copyText(tripUrl(id,'view',{sync:true,cloud:false}));
+    row.querySelector('[data-action="copy-edit"]').onclick=()=>copyText(tripUrl(id,'edit',{sync:true,cloud:false}));
+    list.appendChild(row);
+  });
+}
+async function refreshGasTripList({silent=false}={}){
+  collectGasInputs();
+  const list=document.getElementById('gas-trip-list');
+  if(!gasSyncConfig.url){
+    renderGasTripList();
+    return;
+  }
+  if(!silent&&list)list.innerHTML='<div class="cloud-status sync">正在讀取雲端行程清單…</div>';
+  try{
+    const data=await gasJsonp('list');
+    gasTripListLoaded=true;
+    gasTripListCache=Array.isArray(data.trips)?data.trips:[];
+    renderGasTripList();
+    if(!silent)showToast('已更新雲端行程清單');
+  }catch(e){
+    if(list)list.innerHTML=`<div class="cloud-status err">雲端清單讀取失敗：${esc(e.message)}</div>`;
+  }
+}
+async function openGasTrip(id,mode='view'){
+  if(gasSyncEnabled&&gasLockState.hasLock&&!confirm('目前正在編輯雲端正本。切換行程前請確認已儲存完成；要繼續切換嗎？'))return;
+  collectGasInputs();
+  if(!gasSyncConfig.url){setGasStatus('請先填入 Apps Script Web App URL。','err');return;}
+  currentTripId=sanitizeTripId(id);
+  currentTripTitle=gasTripListCache.find(t=>sanitizeTripId(t.tripId||t.id||'')===currentTripId)?.title||currentTripTitle;
+  gasLockState={lock:null,hasLock:false,checked:false};
+  gasSyncEnabled=true;
+  gasAutoLoadRemote=true;
+  accessMode='view';
+  localStorage.setItem('tp_gas_enabled','1');
+  localStorage.setItem('tp_active_trip_id',currentTripId);
+  replaceUrlForCurrentTrip();
+  updateAccessUI();
+  startGasPolling();
+  const remote=await loadGasTrip({silent:false});
+  if(remote&&mode==='edit')await acquireGasLock({silent:false});
   renderTripModal();
 }
 function readGasConfig(){
@@ -4785,8 +4940,11 @@ document.getElementById('trip-modal-x').onclick=()=>document.getElementById('tri
 document.getElementById('trip-modal').onclick=e=>{if(e.target===document.getElementById('trip-modal'))document.getElementById('trip-modal').classList.remove('open');};
 document.getElementById('trip-save-btn').onclick=saveTripMeta;
 document.getElementById('trip-new-btn').onclick=createNewTrip;
+document.getElementById('trip-export-current-btn').onclick=exportJSON;
+document.getElementById('copy-standalone-url').onclick=()=>copyText(`${PUBLIC_APP_URL}?v=${APP_VERSION}`);
 document.getElementById('copy-edit-url').onclick=()=>{applyTripModalIdentity();collectGasInputs();copyText(tripUrl(currentTripId,'edit'));};
 document.getElementById('copy-view-url').onclick=()=>{applyTripModalIdentity();collectGasInputs();copyText(tripUrl(currentTripId,'view'));};
+document.getElementById('gas-list-btn').onclick=()=>refreshGasTripList({silent:false});
 document.getElementById('gas-enable-btn').onclick=openGasSourceTrip;
 document.getElementById('gas-lock-btn').onclick=()=>{collectGasInputs();acquireGasLock();};
 document.getElementById('gas-load-btn').onclick=()=>{
@@ -4951,6 +5109,9 @@ if(gasSyncEnabled){
   if(gasAutoLoadRemote)loadGasTrip({silent:true});
 }
 if(cloudEnabled)initCloudSync();
+if(!hasTripIdParam&&!gasAutoLoadRemote){
+  setTimeout(openTripModal,350);
+}
 </script>
 </body>
 </html>
