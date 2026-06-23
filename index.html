@@ -978,6 +978,15 @@ body.view-only .empty-day small{display:none}
 .cloud-status.ok{color:#0F6E56;background:#F0F8F2;border-color:#CFE8D3}
 .cloud-status.err{color:var(--danger);background:#FFF5F5;border-color:#F0CACA}
 .cloud-status.sync{color:#185FA5;background:#EFF6FD;border-color:#CFE1F4}
+@media (max-width:680px){
+  .trip-form-grid{grid-template-columns:1fr}
+  .trip-hub-card{grid-template-columns:1fr}
+  .trip-hub-actions{justify-content:flex-start}
+  .trip-url-row{grid-template-columns:44px minmax(0,1fr)}
+  .trip-url-row .trip-action-btn{grid-column:2;justify-self:start}
+  .trip-row{grid-template-columns:1fr;align-items:start}
+  .trip-row-actions{justify-content:flex-start}
+}
 #key-input{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;color:#111;margin-bottom:4px}
 #key-input:focus{border-color:#378ADD}
 .key-row{display:flex;gap:7px;margin-top:8px}
