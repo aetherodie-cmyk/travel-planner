@@ -940,6 +940,14 @@ body.view-only .empty-day small{display:none}
 #key-modal a{color:#185FA5}
 #trip-modal .modal-box{width:min(760px,calc(100vw - 32px));padding:0;overflow:hidden}
 .trip-modal-body{padding:16px;max-height:70vh;overflow-y:auto}
+.trip-tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin:14px 0 0}
+.trip-tab{flex:1;padding:10px 14px;border:none;background:transparent;font-size:13px;font-weight:800;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.trip-tab:hover{color:var(--text)}
+.trip-tab.active{color:var(--primary-strong);border-bottom-color:var(--primary)}
+.trip-tab-pane{display:none;padding-top:12px}
+.trip-tab-pane.active{display:block}
+.cloud-gate{font-size:12px;line-height:1.5;color:var(--muted);background:#FFF8E6;border:1px solid #F0DDA8;border-radius:10px;padding:9px 10px;margin:8px 0 12px}
+.cloud-gate b{color:var(--text)}
 .trip-form-grid{display:grid;grid-template-columns:1.5fr 1fr auto;gap:8px;align-items:end;margin-bottom:12px}
 .trip-form-field label{display:block;font-size:11px;font-weight:800;color:var(--muted);margin-bottom:4px}
 .trip-form-field input,.trip-form-field textarea{width:100%;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:8px 10px;font-size:13px;font-family:inherit;color:var(--text);outline:none}
@@ -1274,63 +1282,83 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         </div>
         <button class="trip-action-btn" id="trip-save-btn"><i class="ti ti-device-floppy"></i> 儲存</button>
       </div>
-      <div class="trip-section-title" style="justify-content:space-between">
-        <span><i class="ti ti-cloud"></i> 雲端共編行程</span>
-        <button class="trip-action-btn secondary" id="gas-list-btn"><i class="ti ti-refresh"></i> 重新整理清單</button>
+      <div class="trip-tabs" role="tablist">
+        <button class="trip-tab active" data-trip-tab="local" role="tab"><i class="ti ti-device-desktop"></i> 本機</button>
+        <button class="trip-tab" data-trip-tab="cloud" role="tab"><i class="ti ti-cloud"></i> 雲端共編</button>
       </div>
-      <div class="trip-help"><b>雲端共編：</b>這裡列出 Google Drive JSON 裡的行程。檢視只讀；要修改需按「開始編輯」取得鎖。未填 Apps Script URL 時不會連到你的雲端。</div>
-      <div class="trip-url-box cloud-share-box">
-        <div class="trip-url-title">目前旅程分享連結</div>
-        <div class="trip-url-row">
-          <div class="trip-url-label">編輯</div>
-          <div class="trip-url-text" id="trip-edit-url"></div>
-          <button class="trip-action-btn secondary" id="copy-edit-url"><i class="ti ti-copy"></i> 複製編輯</button>
+
+      <!-- LOCAL TAB -->
+      <div class="trip-tab-pane active" data-trip-pane="local">
+        <div class="trip-section-title" style="justify-content:space-between">
+          <span><i class="ti ti-device-desktop"></i> 本機單機行程</span>
+          <span style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="trip-action-btn secondary" id="copy-standalone-url"><i class="ti ti-copy"></i> 複製單機版連結</button>
+            <button class="trip-action-btn" id="trip-new-btn"><i class="ti ti-plus"></i> 新增旅程</button>
+          </span>
         </div>
-        <div class="trip-url-row">
-          <div class="trip-url-label">檢視</div>
-          <div class="trip-url-text" id="trip-view-url"></div>
-          <button class="trip-action-btn secondary" id="copy-view-url"><i class="ti ti-copy"></i> 複製檢視</button>
-        </div>
+        <div class="trip-help"><b>單機版：</b>只存在這台電腦 / 手機的瀏覽器，不會自動上傳，也不會讓別人看到。適合給旅伴測試或用 JSON 檔交換意見。</div>
+        <div class="trip-list" id="trip-list"></div>
       </div>
-      <div class="trip-list cloud" id="gas-trip-list">
-        <div class="cloud-status">尚未連接雲端。填入 Apps Script Web App URL 後，可讀取 Google Drive JSON 行程清單。</div>
-      </div>
-      <div class="trip-section-title" style="justify-content:space-between">
-        <span><i class="ti ti-device-desktop"></i> 本機單機行程</span>
-        <span style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="trip-action-btn secondary" id="copy-standalone-url"><i class="ti ti-copy"></i> 複製單機版連結</button>
-          <button class="trip-action-btn secondary" id="trip-new-btn"><i class="ti ti-plus"></i> 新增旅程</button>
-        </span>
-      </div>
-      <div class="trip-help"><b>單機版：</b>只存在這台電腦 / 手機的瀏覽器，不會自動上傳，也不會讓別人看到。適合給旅伴測試或用 JSON 檔交換意見。</div>
-      <div class="trip-list" id="trip-list"></div>
-      <div class="trip-section-title"><i class="ti ti-settings"></i> Google Drive JSON 設定</div>
-      <div class="trip-form-field">
-        <label>Apps Script Web App URL</label>
-        <input id="gas-url-input" placeholder="貼上部署後的 /exec 網址"/>
-      </div>
-      <div class="trip-help"><b>雲端設定：</b>Apps Script URL 是 APP 讀寫 Google Drive JSON 的入口；Token 是簡單的編輯密碼。單機測試者不填這裡，就不會碰到你的雲端資料。</div>
-      <div class="trip-form-grid">
+
+      <!-- CLOUD TAB -->
+      <div class="trip-tab-pane" data-trip-pane="cloud">
+        <div class="trip-section-title"><i class="ti ti-settings"></i> Google Drive JSON 設定</div>
         <div class="trip-form-field">
-          <label>你的暱稱</label>
-          <input id="gas-actor-input" placeholder="例：Iris"/>
+          <label>Apps Script Web App URL</label>
+          <input id="gas-url-input" placeholder="貼上部署後的 /exec 網址"/>
         </div>
-        <div class="trip-form-field">
-          <label>編輯 Token</label>
-          <input id="gas-token-input" placeholder="兩位共編者使用同一組密碼"/>
+        <div class="trip-help"><b>雲端設定：</b>Apps Script URL 是 APP 讀寫 Google Drive JSON 的入口；Token 是簡單的編輯密碼。單機測試者不填這裡，就不會碰到你的雲端資料。</div>
+        <div class="trip-form-grid">
+          <div class="trip-form-field">
+            <label>你的暱稱</label>
+            <input id="gas-actor-input" placeholder="例：Iris"/>
+          </div>
+          <div class="trip-form-field">
+            <label>編輯 Token</label>
+            <input id="gas-token-input" placeholder="兩位共編者使用同一組密碼"/>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <button class="trip-action-btn" id="gas-enable-btn"><i class="ti ti-cloud-download"></i> 開啟雲端正本</button>
+          <button class="trip-action-btn secondary" id="gas-save-btn"><i class="ti ti-cloud-upload"></i> 用目前畫面建立雲端正本</button>
+          <button class="trip-action-btn secondary" id="gas-local-copy-btn"><i class="ti ti-copy"></i> 另存本機副本</button>
+          <button class="trip-action-btn danger" id="gas-disable-btn"><i class="ti ti-cloud-off"></i> 斷開雲端</button>
+          <button class="trip-action-btn secondary" id="gas-load-btn" style="display:none"><i class="ti ti-download"></i> 下載 JSON 到畫面</button>
+          <button class="trip-action-btn" id="gas-lock-btn" style="display:none"><i class="ti ti-lock-open"></i> 開始編輯</button>
+          <button class="trip-action-btn secondary" id="gas-release-btn" style="display:none"><i class="ti ti-lock"></i> 完成編輯</button>
+          <button class="trip-action-btn secondary" id="gas-abandon-btn" style="display:none"><i class="ti ti-rotate"></i> 放棄本次編輯</button>
+        </div>
+        <div class="cloud-status" id="gas-status">尚未啟用。適合先 2 人共編；純檢視連結可讀取，本機編輯需有 token。</div>
+
+        <div class="cloud-gate" id="cloud-gate"><b>尚未設定雲端：</b>填入上方 Apps Script URL 並按「開啟雲端正本」後，這裡會顯示雲端行程清單與分享連結。</div>
+
+        <div class="cloud-only" id="cloud-only-section" style="display:none">
+          <div class="trip-url-box cloud-share-box">
+            <div class="trip-url-title">目前旅程分享連結</div>
+            <div class="trip-url-row">
+              <div class="trip-url-label">編輯</div>
+              <div class="trip-url-text" id="trip-edit-url"></div>
+              <button class="trip-action-btn secondary" id="copy-edit-url"><i class="ti ti-copy"></i> 複製編輯</button>
+            </div>
+            <div class="trip-url-row">
+              <div class="trip-url-label">檢視</div>
+              <div class="trip-url-text" id="trip-view-url"></div>
+              <button class="trip-action-btn secondary" id="copy-view-url"><i class="ti ti-copy"></i> 複製檢視</button>
+            </div>
+          </div>
+          <div class="trip-section-title" style="justify-content:space-between">
+            <span><i class="ti ti-cloud"></i> 雲端共編行程</span>
+            <span style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="trip-action-btn secondary" id="gas-list-btn"><i class="ti ti-refresh"></i> 重新整理清單</button>
+              <button class="trip-action-btn" id="gas-new-cloud-btn"><i class="ti ti-plus"></i> 新增雲端行程</button>
+            </span>
+          </div>
+          <div class="trip-help"><b>雲端共編：</b>這裡列出 Google Drive JSON 裡的行程。檢視只讀；要修改需按「開始編輯」取得鎖。</div>
+          <div class="trip-list cloud" id="gas-trip-list">
+            <div class="cloud-status">按「重新整理清單」查看雲端行程。</div>
+          </div>
         </div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-        <button class="trip-action-btn" id="gas-enable-btn"><i class="ti ti-cloud-download"></i> 開啟雲端正本</button>
-        <button class="trip-action-btn secondary" id="gas-save-btn"><i class="ti ti-cloud-upload"></i> 用目前畫面建立雲端正本</button>
-        <button class="trip-action-btn secondary" id="gas-local-copy-btn"><i class="ti ti-copy"></i> 另存本機副本</button>
-        <button class="trip-action-btn danger" id="gas-disable-btn"><i class="ti ti-cloud-off"></i> 斷開雲端</button>
-        <button class="trip-action-btn secondary" id="gas-load-btn" style="display:none"><i class="ti ti-download"></i> 下載 JSON 到畫面</button>
-        <button class="trip-action-btn" id="gas-lock-btn" style="display:none"><i class="ti ti-lock-open"></i> 開始編輯</button>
-        <button class="trip-action-btn secondary" id="gas-release-btn" style="display:none"><i class="ti ti-lock"></i> 完成編輯</button>
-        <button class="trip-action-btn secondary" id="gas-abandon-btn" style="display:none"><i class="ti ti-rotate"></i> 放棄本次編輯</button>
-      </div>
-      <div class="cloud-status" id="gas-status">尚未啟用。適合先 2 人共編；純檢視連結可讀取，本機編輯需有 token。</div>
       <div style="display:none">
         <div class="trip-section-title"><i class="ti ti-cloud"></i> Firebase 共編（進階）</div>
         <div class="trip-form-field">
@@ -1653,7 +1681,7 @@ const params=new URLSearchParams(location.search);
 const CLOUD_CONFIG_KEY='tp_cloud_config';
 const GAS_SYNC_KEY='tp_gas_sync_config';
 const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/';
-const APP_VERSION='20260623-trip-hub';
+const APP_VERSION='20260623-trip-hub-tabs';
 function sanitizeTripId(value){
   return String(value||'local-default').trim().replace(/[^\w-]/g,'-').slice(0,48)||'local-default';
 }
@@ -2001,8 +2029,27 @@ function renderTripModal(){
   updateGasStatus();
   updateCloudStatus();
 }
+function switchTripTab(name){
+  const tabs=document.querySelectorAll('.trip-tab');
+  const panes=document.querySelectorAll('.trip-tab-pane');
+  tabs.forEach(t=>t.classList.toggle('active',t.dataset.tripTab===name));
+  panes.forEach(p=>p.classList.toggle('active',p.dataset.tripPane===name));
+  try{localStorage.setItem('tripModalTab',name);}catch(e){}
+}
+function updateCloudGateVisibility(){
+  const inputVal=document.getElementById('gas-url-input')?.value.trim()||'';
+  const hasUrl=!!(gasSyncConfig.url||inputVal);
+  const gate=document.getElementById('cloud-gate');
+  const section=document.getElementById('cloud-only-section');
+  if(gate)gate.style.display=hasUrl?'none':'';
+  if(section)section.style.display=hasUrl?'':'none';
+}
 function openTripModal(){
   renderTripModal();
+  let tab='local';
+  try{const saved=localStorage.getItem('tripModalTab');if(saved==='local'||saved==='cloud')tab=saved;}catch(e){}
+  switchTripTab(tab);
+  updateCloudGateVisibility();
   document.getElementById('trip-modal').classList.add('open');
   if(gasSyncConfig.url)refreshGasTripList({silent:true});
 }
@@ -2292,6 +2339,7 @@ function setGasStatus(text,type=''){
 }
 function updateGasStatus(){
   updateGasLockButtons();
+  if(typeof updateCloudGateVisibility==='function')updateCloudGateVisibility();
   if(!gasSyncEnabled){
     setGasStatus('尚未開啟雲端正本。本機旅程只存在這台裝置；要共用請先開啟或建立 Drive JSON。');
     return;
@@ -4919,6 +4967,13 @@ document.getElementById('ui-mode-btn').onclick=cycleUiMode;
 document.getElementById('access-mode-btn').onclick=toggleAccessMode;
 document.getElementById('trip-name-btn').onclick=openTripModal;
 document.getElementById('trip-manager-btn').onclick=openTripModal;
+document.querySelectorAll('.trip-tab').forEach(btn=>{
+  btn.onclick=()=>switchTripTab(btn.dataset.tripTab);
+});
+document.getElementById('gas-new-cloud-btn').onclick=()=>{
+  if(typeof uploadCurrentGasTrip==='function')uploadCurrentGasTrip();
+};
+document.getElementById('gas-url-input').addEventListener('input',updateCloudGateVisibility);
 document.getElementById('mobile-ui-mode-btn').onclick=()=>{cycleUiMode();document.getElementById('mobile-actions-menu').classList.remove('open');};
 document.getElementById('mobile-access-mode').onclick=()=>{toggleAccessMode();document.getElementById('mobile-actions-menu').classList.remove('open');};
 document.getElementById('mobile-actions-btn').onclick=e=>{e.stopPropagation();document.getElementById('mobile-actions-menu').classList.toggle('open');};
