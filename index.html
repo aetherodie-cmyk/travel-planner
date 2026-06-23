@@ -1333,19 +1333,6 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         <div class="cloud-gate" id="cloud-gate"><b>尚未設定雲端：</b>填入上方 Apps Script URL 並按「開啟雲端正本」後，這裡會顯示雲端行程清單與分享連結。</div>
 
         <div class="cloud-only" id="cloud-only-section" style="display:none">
-          <div class="trip-url-box cloud-share-box">
-            <div class="trip-url-title">目前旅程分享連結</div>
-            <div class="trip-url-row">
-              <div class="trip-url-label">編輯</div>
-              <div class="trip-url-text" id="trip-edit-url"></div>
-              <button class="trip-action-btn secondary" id="copy-edit-url"><i class="ti ti-copy"></i> 複製編輯</button>
-            </div>
-            <div class="trip-url-row">
-              <div class="trip-url-label">檢視</div>
-              <div class="trip-url-text" id="trip-view-url"></div>
-              <button class="trip-action-btn secondary" id="copy-view-url"><i class="ti ti-copy"></i> 複製檢視</button>
-            </div>
-          </div>
           <div class="trip-section-title" style="justify-content:space-between">
             <span><i class="ti ti-cloud"></i> 雲端共編行程</span>
             <span style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1681,7 +1668,7 @@ const params=new URLSearchParams(location.search);
 const CLOUD_CONFIG_KEY='tp_cloud_config';
 const GAS_SYNC_KEY='tp_gas_sync_config';
 const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/';
-const APP_VERSION='20260623-trip-hub-tabs';
+const APP_VERSION='20260623-trip-hub-tabs-2';
 function sanitizeTripId(value){
   return String(value||'local-default').trim().replace(/[^\w-]/g,'-').slice(0,48)||'local-default';
 }
@@ -1998,10 +1985,10 @@ function renderTripModal(){
     const source=gasSyncEnabled?'雲端共編正本':'本機單機';
     currentMeta.textContent=`${source} · ${currentTripId} · ${tripSummary(state)}`;
   }
-  const editUrl=tripUrl(currentTripId,'edit');
-  const viewUrl=tripUrl(currentTripId,'view');
-  document.getElementById('trip-edit-url').textContent=editUrl;
-  document.getElementById('trip-view-url').textContent=viewUrl;
+  const editUrlEl=document.getElementById('trip-edit-url');
+  const viewUrlEl=document.getElementById('trip-view-url');
+  if(editUrlEl)editUrlEl.textContent=tripUrl(currentTripId,'edit');
+  if(viewUrlEl)viewUrlEl.textContent=tripUrl(currentTripId,'view');
   const cloudRaw=localStorage.getItem(CLOUD_CONFIG_KEY)||'';
   document.getElementById('cloud-config-input').value=cloudRaw;
   const list=document.getElementById('trip-list');
@@ -5006,8 +4993,12 @@ document.getElementById('trip-save-btn').onclick=saveTripMeta;
 document.getElementById('trip-new-btn').onclick=createNewTrip;
 document.getElementById('trip-export-current-btn').onclick=exportJSON;
 document.getElementById('copy-standalone-url').onclick=()=>copyText(`${PUBLIC_APP_URL}?v=${APP_VERSION}`);
-document.getElementById('copy-edit-url').onclick=()=>{applyTripModalIdentity();collectGasInputs();copyText(tripUrl(currentTripId,'edit'));};
-document.getElementById('copy-view-url').onclick=()=>{applyTripModalIdentity();collectGasInputs();copyText(tripUrl(currentTripId,'view'));};
+{
+  const ce=document.getElementById('copy-edit-url');
+  const cv=document.getElementById('copy-view-url');
+  if(ce)ce.onclick=()=>{applyTripModalIdentity();collectGasInputs();copyText(tripUrl(currentTripId,'edit'));};
+  if(cv)cv.onclick=()=>{applyTripModalIdentity();collectGasInputs();copyText(tripUrl(currentTripId,'view'));};
+}
 document.getElementById('gas-list-btn').onclick=()=>refreshGasTripList({silent:false});
 document.getElementById('gas-enable-btn').onclick=openGasSourceTrip;
 document.getElementById('gas-lock-btn').onclick=()=>{collectGasInputs();acquireGasLock();};
