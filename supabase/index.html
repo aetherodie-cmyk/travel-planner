@@ -1287,6 +1287,16 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
             <button class="trip-action-btn danger" id="cloud-disable-btn"><i class="ti ti-cloud-off"></i> 停用</button>
           </div>
           <div class="cloud-status" id="cloud-status">尚未連接 Supabase。資料表建立後，這個新版站台就會使用 Supabase 作為共編資料庫。</div>
+          <div class="trip-section-title" style="justify-content:space-between">
+            <span><i class="ti ti-list"></i> 雲端旅程清單</span>
+            <span style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="trip-action-btn secondary" id="cloud-refresh-list-btn"><i class="ti ti-refresh"></i> 重新整理</button>
+              <button class="trip-action-btn" id="cloud-new-trip-btn"><i class="ti ti-plus"></i> 新增雲端旅程</button>
+            </span>
+          </div>
+          <div class="trip-list cloud" id="cloud-trip-list">
+            <div class="cloud-status">尚未讀取 Supabase 旅程清單。</div>
+          </div>
           <div class="trip-url-box cloud-share-box">
             <div class="trip-url-title">分享連結</div>
             <div class="trip-url-row">
@@ -1714,6 +1724,8 @@ let cloudUnsub=null;
 let cloudApi=null;
 let cloudApplying=false;
 let cloudSaveTimer=null;
+let cloudTripListCache=[];
+let cloudTripListLoaded=false;
 let gasSyncEnabled=params.get('sync')==='gas'||localStorage.getItem('tp_gas_enabled')==='1';
 let gasSyncConfig={url:'',actor:'',token:'',pollSec:6};
 let gasPollTimer=null;
@@ -2052,6 +2064,7 @@ function renderTripModal(){
     row.querySelector('[data-action="delete"]').onclick=()=>deleteTrip(trip.id);
     list.appendChild(row);
   });
+  renderCloudTripList();
   renderGasTripList();
   updateGasStatus();
   updateCloudStatus();
@@ -2059,6 +2072,7 @@ function renderTripModal(){
 function openTripModal(){
   renderTripModal();
   document.getElementById('trip-modal').classList.add('open');
+  if(getCloudConfig()?.url)refreshCloudTripList({silent:true});
   if(gasSyncConfig.url)refreshGasTripList({silent:true});
 }
 function saveTripMeta(){
@@ -2137,6 +2151,119 @@ function exportTripById(id){
   a.download=`travel-planner-${sanitizeTripId(id)}.json`;
   a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+async function ensureCloudClient(){
+  cloudConfig=getCloudConfig();
+  if(!cloudConfig?.url||!cloudConfig?.anonKey)throw new Error('Supabase 設定不完整，需要 url 與 anonKey。');
+  if(!cloudApi){
+    cloudApi=await import('https://esm.sh/@supabase/supabase-js@2');
+  }
+  if(!cloudDb){
+    cloudDb=cloudApi.createClient(cloudConfig.url,cloudConfig.anonKey);
+  }
+  return cloudDb;
+}
+function renderCloudTripList(){
+  const list=document.getElementById('cloud-trip-list');
+  if(!list)return;
+  if(!getCloudConfig()?.url){
+    list.innerHTML='<div class="cloud-status">尚未設定 Supabase。展開「Supabase 設定」填入 JSON 後，即可讀取雲端旅程。</div>';
+    return;
+  }
+  if(!cloudTripListLoaded){
+    list.innerHTML='<div class="cloud-status sync">按「重新整理」讀取 Supabase 旅程清單。</div>';
+    return;
+  }
+  if(!cloudTripListCache.length){
+    list.innerHTML='<div class="cloud-status">Supabase 目前沒有旅程。可以按「新增雲端旅程」建立第一個。</div>';
+    return;
+  }
+  list.innerHTML='';
+  cloudTripListCache.forEach(meta=>{
+    const id=sanitizeTripId(meta.id||'');
+    if(!id)return;
+    const row=document.createElement('div');
+    row.className='trip-row cloud-trip'+(id===currentTripId&&cloudEnabled?' active':'');
+    const updated=meta.updated_at?new Date(meta.updated_at).toLocaleString('zh-TW'):'未更新';
+    const by=meta.updated_by?` · ${esc(meta.updated_by)}`:'';
+    row.innerHTML=`
+      <div>
+        <div class="trip-row-title">${esc(meta.title||id)}</div>
+        <div class="trip-row-meta">${esc(id)} · ${esc(updated)}${by}</div>
+      </div>
+      <div class="trip-row-actions">
+        <button class="trip-action-btn secondary" data-action="view"><i class="ti ti-eye"></i> 檢視</button>
+        <button class="trip-action-btn" data-action="edit"><i class="ti ti-edit"></i> 編輯</button>
+        <button class="trip-action-btn secondary" data-action="copy-view"><i class="ti ti-copy"></i> 檢視連結</button>
+        <button class="trip-action-btn secondary" data-action="copy-edit"><i class="ti ti-copy"></i> 編輯連結</button>
+      </div>`;
+    row.querySelector('[data-action="view"]').onclick=()=>openCloudTrip(id,'view');
+    row.querySelector('[data-action="edit"]').onclick=()=>openCloudTrip(id,'edit');
+    row.querySelector('[data-action="copy-view"]').onclick=()=>copyText(tripUrl(id,'view',{cloud:true,sync:false}));
+    row.querySelector('[data-action="copy-edit"]').onclick=()=>copyText(tripUrl(id,'edit',{cloud:true,sync:false}));
+    list.appendChild(row);
+  });
+}
+async function refreshCloudTripList({silent=false}={}){
+  const list=document.getElementById('cloud-trip-list');
+  if(!silent&&list)list.innerHTML='<div class="cloud-status sync">正在讀取 Supabase 旅程清單…</div>';
+  try{
+    const db=await ensureCloudClient();
+    const {data,error}=await db.from('trips').select('id,title,updated_at,updated_by,schema').order('updated_at',{ascending:false}).limit(100);
+    if(error)throw error;
+    cloudTripListCache=data||[];
+    cloudTripListLoaded=true;
+    renderCloudTripList();
+  }catch(e){
+    cloudTripListLoaded=false;
+    if(list)list.innerHTML=`<div class="cloud-status err">Supabase 旅程清單讀取失敗：${esc(e.message)}</div>`;
+  }
+}
+async function openCloudTrip(id,mode='view'){
+  if(gasSyncEnabled&&gasLockState.hasLock&&!confirm('目前正在編輯 Google Drive JSON 正本。切換到 Supabase 旅程前，請確認已儲存。要繼續嗎？'))return;
+  clearInterval(gasPollTimer);
+  gasPollTimer=null;
+  gasSyncEnabled=false;
+  gasAutoLoadRemote=false;
+  gasLockState={lock:null,hasLock:false,checked:false};
+  localStorage.setItem('tp_gas_enabled','0');
+  if(cloudUnsub){cloudUnsub();cloudUnsub=null;}
+  cloudDocRef=null;
+  cloudEnabled=true;
+  localStorage.setItem('tp_cloud_enabled','1');
+  accessMode=mode==='view'?'view':'edit';
+  currentTripId=sanitizeTripId(id);
+  localStorage.setItem('tp_active_trip_id',currentTripId);
+  replaceUrlForCurrentTrip();
+  renderTripModal();
+  updateAccessUI();
+  await initCloudSync();
+}
+async function createNewCloudTrip(){
+  const title=prompt('新雲端旅程名稱：','新的旅行');
+  if(!title)return;
+  const id=sanitizeTripId(prompt('旅程 ID：',`${title}-${new Date().toISOString().slice(0,10)}`)||title);
+  cloudEnabled=true;
+  localStorage.setItem('tp_cloud_enabled','1');
+  clearInterval(gasPollTimer);
+  gasPollTimer=null;
+  gasSyncEnabled=false;
+  gasAutoLoadRemote=false;
+  gasLockState={lock:null,hasLock:false,checked:false};
+  localStorage.setItem('tp_gas_enabled','0');
+  accessMode='edit';
+  currentTripTitle=title.trim()||'新的旅行';
+  currentTripId=id;
+  resetTripData();
+  recordActivity('create_cloud_trip',{title:currentTripTitle,currentTripId});
+  saveLocal();
+  replaceUrlForCurrentTrip();
+  renderSidebar();
+  renderMarkers();
+  renderTripModal();
+  updateAccessUI();
+  await initCloudSync();
+  await refreshCloudTripList({silent:true});
 }
 function renderGasTripList(){
   const list=document.getElementById('gas-trip-list');
@@ -3147,6 +3274,7 @@ async function pushCloudState(){
     }).eq('id',currentTripId);
     if(touchError)throw touchError;
     setCloudStatus(`Supabase 已同步多表資料：trips/${currentTripId}`,'ok');
+    refreshCloudTripList({silent:true});
   }catch(e){
     setCloudStatus(`Supabase 寫入失敗：${e.message}`,'err');
   }
@@ -3164,12 +3292,14 @@ function enableCloudFromModal(){
   updateAccessUI();
   renderTripModal();
   initCloudSync();
+  refreshCloudTripList({silent:true});
 }
 function disableCloud(){
   if(cloudUnsub){cloudUnsub();cloudUnsub=null;}
   cloudEnabled=false;
   cloudDocRef=null;
   localStorage.setItem('tp_cloud_enabled','0');
+  cloudTripListLoaded=false;
   replaceUrlForCurrentTrip();
   updateAccessUI();
   renderTripModal();
@@ -5246,6 +5376,8 @@ document.getElementById('gas-local-copy-btn').onclick=saveLocalCopyFromCurrent;
 document.getElementById('gas-release-btn').onclick=()=>{collectGasInputs();releaseGasLock();};
 document.getElementById('gas-abandon-btn').onclick=abandonGasEdit;
 document.getElementById('gas-disable-btn').onclick=disableGasSync;
+document.getElementById('cloud-refresh-list-btn').onclick=()=>refreshCloudTripList({silent:false});
+document.getElementById('cloud-new-trip-btn').onclick=createNewCloudTrip;
 document.getElementById('cloud-enable-btn').onclick=enableCloudFromModal;
 document.getElementById('cloud-disable-btn').onclick=disableCloud;
 document.getElementById('cloud-push-btn').onclick=async()=>{
