@@ -3076,7 +3076,7 @@ function scheduleCloudSave(){
   cloudSaveTimer=setTimeout(pushCloudState,800);
 }
 async function pushCloudState(){
-  if(!cloudEnabled||!cloudDocRef||!cloudApi||!canEdit())return;
+  if(!cloudEnabled||!cloudDocRef||!cloudApi||!cloudDb||!canEdit())return;
   try{
     setCloudStatus('正在寫入 Supabase 多表資料…','sync');
     const state=makeTripState();
@@ -5209,7 +5209,26 @@ document.getElementById('gas-abandon-btn').onclick=abandonGasEdit;
 document.getElementById('gas-disable-btn').onclick=disableGasSync;
 document.getElementById('cloud-enable-btn').onclick=enableCloudFromModal;
 document.getElementById('cloud-disable-btn').onclick=disableCloud;
-document.getElementById('cloud-push-btn').onclick=()=>{if(!cloudEnabled)enableCloudFromModal();else pushCloudState();};
+document.getElementById('cloud-push-btn').onclick=async()=>{
+  if(!cloudEnabled){
+    enableCloudFromModal();
+    setCloudStatus('已啟用 Supabase，請確認連線完成後再按一次建立雲端正本。','sync');
+    return;
+  }
+  if(!cloudDocRef||!cloudDb){
+    setCloudStatus('尚未完成 Supabase 連線，正在重新連線…','sync');
+    await initCloudSync();
+  }
+  if(!requireEdit('建立雲端正本')){
+    setCloudStatus('目前不是可編輯狀態，所以沒有寫入資料表。請用編輯連結進入，或按「開始編輯」後再建立雲端正本。','err');
+    return;
+  }
+  if(!cloudDocRef||!cloudDb){
+    setCloudStatus('Supabase 尚未連線成功，無法建立雲端正本。','err');
+    return;
+  }
+  pushCloudState();
+};
 // import modal
 document.getElementById('import-btn').onclick=openImportModal;
 document.getElementById('import-modal-x').onclick=()=>document.getElementById('import-modal').classList.remove('open');
