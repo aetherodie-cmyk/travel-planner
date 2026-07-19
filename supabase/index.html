@@ -1283,23 +1283,13 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
       </div>
       <details class="trip-panel primary" open>
         <summary>
-          <span class="trip-panel-title"><i class="ti ti-database"></i> Supabase 共編正本</span>
+          <span class="trip-panel-title"><i class="ti ti-list"></i> 選擇雲端旅程</span>
         </summary>
         <div class="trip-panel-body">
-          <div class="trip-help"><b>目前主要資料來源：</b>Supabase 會成為多人共編的雲端正本。旅伴使用同一個行程連結即可看到更新；編輯版會直接寫入資料庫的多張資料表。</div>
-          <div class="trip-action-row">
-            <button class="trip-action-btn secondary" id="cloud-reload-btn"><i class="ti ti-download"></i> 從雲端載入</button>
-            <button class="trip-action-btn secondary" id="cloud-push-btn"><i class="ti ti-upload"></i> 儲存到 Supabase</button>
-            <button class="trip-action-btn" id="cloud-edit-unlock-btn"><i class="ti ti-lock-open"></i> 輸入編輯密碼</button>
-            <button class="trip-action-btn secondary" id="cloud-admin-unlock-btn"><i class="ti ti-shield-lock"></i> 管理者</button>
-            <button class="trip-action-btn secondary" id="cloud-token-manage-btn"><i class="ti ti-key"></i> 設定密碼</button>
-            <button class="trip-action-btn danger" id="cloud-archive-current-btn"><i class="ti ti-archive"></i> 封存目前旅程</button>
-            <button class="trip-action-btn" id="cloud-enable-btn" style="display:none"><i class="ti ti-cloud-upload"></i> 連線 Supabase</button>
-            <button class="trip-action-btn danger" id="cloud-disable-btn" style="display:none"><i class="ti ti-cloud-off"></i> 停用</button>
-          </div>
+          <div class="trip-help"><b>主要入口：</b>選一個旅程進入檢視或編輯；每列右側可直接複製分享連結。密碼、封存與資料庫設定收在下方「進階管理」。</div>
           <div class="cloud-status" id="cloud-status">尚未連接 Supabase。資料表建立後，這個新版站台就會使用 Supabase 作為共編資料庫。</div>
           <div class="trip-section-title" style="justify-content:space-between">
-            <span><i class="ti ti-list"></i> 雲端旅程清單</span>
+            <span><i class="ti ti-cloud"></i> 雲端旅程清單</span>
             <span style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="trip-action-btn secondary" id="cloud-refresh-list-btn"><i class="ti ti-refresh"></i> 重新整理</button>
               <button class="trip-action-btn secondary" id="cloud-toggle-archived-btn"><i class="ti ti-archive"></i> 顯示封存</button>
@@ -1309,18 +1299,24 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
           <div class="trip-list cloud" id="cloud-trip-list">
             <div class="cloud-status">尚未讀取 Supabase 旅程清單。</div>
           </div>
-          <div class="trip-url-box cloud-share-box">
-            <div class="trip-url-title">分享連結</div>
-            <div class="trip-url-row">
-              <div class="trip-url-label">編輯</div>
-              <div class="trip-url-text" id="trip-edit-url"></div>
-              <button class="trip-action-btn secondary" id="copy-edit-url"><i class="ti ti-copy"></i> 複製編輯</button>
-            </div>
-            <div class="trip-url-row">
-              <div class="trip-url-label">檢視</div>
-              <div class="trip-url-text" id="trip-view-url"></div>
-              <button class="trip-action-btn secondary" id="copy-view-url"><i class="ti ti-copy"></i> 複製檢視</button>
-            </div>
+        </div>
+      </details>
+
+      <details class="trip-panel">
+        <summary>
+          <span class="trip-panel-title"><i class="ti ti-shield-lock"></i> 進階管理</span>
+        </summary>
+        <div class="trip-panel-body">
+          <div class="trip-help"><b>較少使用：</b>這裡放權限密碼、手動同步、封存與 Supabase 連線設定。日常選旅程不需要打開。</div>
+          <div class="trip-action-row">
+            <button class="trip-action-btn secondary" id="cloud-reload-btn"><i class="ti ti-download"></i> 從雲端載入</button>
+            <button class="trip-action-btn secondary" id="cloud-push-btn"><i class="ti ti-upload"></i> 儲存到 Supabase</button>
+            <button class="trip-action-btn" id="cloud-edit-unlock-btn"><i class="ti ti-lock-open"></i> 輸入編輯密碼</button>
+            <button class="trip-action-btn secondary" id="cloud-admin-unlock-btn"><i class="ti ti-shield-lock"></i> 管理者</button>
+            <button class="trip-action-btn secondary" id="cloud-token-manage-btn"><i class="ti ti-key"></i> 設定密碼</button>
+            <button class="trip-action-btn danger" id="cloud-archive-current-btn"><i class="ti ti-archive"></i> 封存目前旅程</button>
+            <button class="trip-action-btn" id="cloud-enable-btn" style="display:none"><i class="ti ti-cloud-upload"></i> 連線 Supabase</button>
+            <button class="trip-action-btn danger" id="cloud-disable-btn" style="display:none"><i class="ti ti-cloud-off"></i> 停用</button>
           </div>
           <details class="trip-panel">
             <summary><span class="trip-panel-title"><i class="ti ti-settings"></i> Supabase 設定</span></summary>
@@ -1336,12 +1332,13 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
 
       <details class="trip-panel">
         <summary>
-          <span class="trip-panel-title"><i class="ti ti-id"></i> 旅程名稱與 ID</span>
+          <span class="trip-panel-title"><i class="ti ti-id"></i> 旅程基本資料</span>
         </summary>
         <div class="trip-panel-body">
+          <div class="trip-help">只修改目前旅程的顯示名稱與網址 ID；權限密碼請到「進階管理」處理。</div>
           <div class="trip-form-grid">
             <div class="trip-form-field">
-              <label>旅行名稱</label>
+              <label>旅程顯示名稱</label>
               <input id="trip-title-input" placeholder="例：東北賞楓 2026"/>
             </div>
             <div class="trip-form-field">
@@ -2097,8 +2094,10 @@ function renderTripModal(){
   }
   const editUrl=tripUrl(currentTripId,'edit',{cloud:true,sync:false});
   const viewUrl=tripUrl(currentTripId,'view',{cloud:true,sync:false});
-  document.getElementById('trip-edit-url').textContent=editUrl;
-  document.getElementById('trip-view-url').textContent=viewUrl;
+  const editUrlEl=document.getElementById('trip-edit-url');
+  const viewUrlEl=document.getElementById('trip-view-url');
+  if(editUrlEl)editUrlEl.textContent=editUrl;
+  if(viewUrlEl)viewUrlEl.textContent=viewUrl;
   const cloudRaw=localStorage.getItem(CLOUD_CONFIG_KEY)||(SUPABASE_CONFIG?.url?JSON.stringify(SUPABASE_CONFIG,null,2):'');
   document.getElementById('cloud-config-input').value=cloudRaw;
   const list=document.getElementById('trip-list');
@@ -5627,8 +5626,10 @@ document.getElementById('trip-save-btn').onclick=saveTripMeta;
 document.getElementById('trip-new-btn').onclick=createNewTrip;
 document.getElementById('trip-export-current-btn').onclick=exportJSON;
 document.getElementById('copy-standalone-url').onclick=()=>copyText(`${PUBLIC_APP_URL}?standalone=1&v=${APP_VERSION}`);
-document.getElementById('copy-edit-url').onclick=()=>{applyTripModalIdentity();collectGasInputs();copyText(tripUrl(currentTripId,'edit'));};
-document.getElementById('copy-view-url').onclick=()=>{applyTripModalIdentity();collectGasInputs();copyText(tripUrl(currentTripId,'view'));};
+const copyEditUrlBtn=document.getElementById('copy-edit-url');
+if(copyEditUrlBtn)copyEditUrlBtn.onclick=()=>{applyTripModalIdentity();collectGasInputs();copyText(tripUrl(currentTripId,'edit'));};
+const copyViewUrlBtn=document.getElementById('copy-view-url');
+if(copyViewUrlBtn)copyViewUrlBtn.onclick=()=>{applyTripModalIdentity();collectGasInputs();copyText(tripUrl(currentTripId,'view'));};
 document.getElementById('gas-list-btn').onclick=()=>refreshGasTripList({silent:false});
 document.getElementById('gas-enable-btn').onclick=openGasSourceTrip;
 document.getElementById('gas-lock-btn').onclick=()=>{collectGasInputs();acquireGasLock();};
