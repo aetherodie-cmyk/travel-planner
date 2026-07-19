@@ -30,13 +30,19 @@ create table if not exists public.trips (
   updated_at timestamptz not null default now(),
   updated_by text,
   schema text not null default 'split-trip-v1',
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  archived boolean not null default false,
+  edit_token_hash text,
+  admin_token_hash text
 );
 
 alter table public.trips add column if not exists active_day integer not null default 0;
 alter table public.trips add column if not exists ors_api_key text not null default '';
 alter table public.trips add column if not exists use_api_key boolean not null default false;
 alter table public.trips add column if not exists created_at timestamptz not null default now();
+alter table public.trips add column if not exists archived boolean not null default false;
+alter table public.trips add column if not exists edit_token_hash text;
+alter table public.trips add column if not exists admin_token_hash text;
 alter table public.trips alter column payload set default '{}';
 
 create table if not exists public.days (
@@ -159,13 +165,23 @@ end $$;
 
 完成後，新的資料來源會是 `days`、`places`、`route_segments`、`trip_logs`。`trips.payload` 只會保留很小的備援標記，不再存整包 8MB JSON。
 
-## 5. 權限提醒
+## 5. 簡單編輯密碼與封存
 
-目前 beta 規則是「知道站台與行程 ID 的人可以讀寫」，適合小範圍旅伴先試用。
+目前 `/supabase/` 站台支援第一版簡單控管：
+
+- 檢視連結：拿到連結即可查看。
+- 編輯連結：若旅程有設定編輯密碼，需要輸入密碼才會開啟編輯。
+- 管理者密碼：可設定/更換編輯密碼，並封存或取消封存旅程。
+- 封存旅程：預設不顯示在雲端旅程清單，管理者可切換顯示封存。
+
+密碼不以明文保存，會以 hash 存入 `trips.edit_token_hash` 與 `trips.admin_token_hash`。
+
+## 6. 權限提醒
+
+目前這是「簡單控管」版本，適合小範圍旅伴使用。若要真正防止懂技術的人繞過前端直接呼叫 Supabase API，需要下一階段把寫入改成資料庫 RPC / Edge Function，讓資料庫端檢查 token 後才允許寫入。
 
 正式版建議改成 Supabase Auth + `trip_members`：
 
 - owner：可管理旅程與成員
 - editor：可修改行程
 - viewer：只能查看
-

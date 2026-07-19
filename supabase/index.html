@@ -982,8 +982,14 @@ body.view-only .empty-day small{display:none}
 .trip-row.active{border-color:var(--primary);background:var(--primary-soft)}
 .trip-row.cloud-trip{border-color:#D5E3F3;background:#F8FBFF}
 .trip-row.cloud-trip.active{border-color:#378ADD;background:#EFF6FD}
+.trip-row.archived{opacity:.62;background:#FAFAFA;border-style:dashed}
 .trip-row-title{font-size:13px;font-weight:900;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .trip-row-meta{font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trip-id-chip,.trip-state-chip{display:inline-flex;align-items:center;height:20px;border-radius:6px;padding:0 7px;font-size:11px;font-weight:900;margin-right:6px;vertical-align:middle}
+.trip-id-chip{color:#185FA5;background:#E6F1FB;border:1px solid #C8DDF2}
+.trip-state-chip{color:#5F6368;background:#F1F3F4;border:1px solid #D8DADC}
+.trip-state-chip.locked{color:#854F0B;background:#FAEEDA;border-color:#F0D6A5}
+.trip-state-chip.archived{color:#A32D2D;background:#FFF5F5;border-color:#F0CACA}
 .trip-row-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
 .cloud-status{font-size:12px;line-height:1.5;color:var(--muted);border:1px solid var(--line-soft);border-radius:10px;background:#FAFBFA;padding:9px 10px;margin-top:8px}
 .cloud-status.ok{color:#0F6E56;background:#F0F8F2;border-color:#CFE8D3}
@@ -1284,6 +1290,10 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
           <div class="trip-action-row">
             <button class="trip-action-btn secondary" id="cloud-reload-btn"><i class="ti ti-download"></i> 從雲端載入</button>
             <button class="trip-action-btn secondary" id="cloud-push-btn"><i class="ti ti-upload"></i> 儲存到 Supabase</button>
+            <button class="trip-action-btn" id="cloud-edit-unlock-btn"><i class="ti ti-lock-open"></i> 輸入編輯密碼</button>
+            <button class="trip-action-btn secondary" id="cloud-admin-unlock-btn"><i class="ti ti-shield-lock"></i> 管理者</button>
+            <button class="trip-action-btn secondary" id="cloud-token-manage-btn"><i class="ti ti-key"></i> 設定密碼</button>
+            <button class="trip-action-btn danger" id="cloud-archive-current-btn"><i class="ti ti-archive"></i> 封存目前旅程</button>
             <button class="trip-action-btn" id="cloud-enable-btn" style="display:none"><i class="ti ti-cloud-upload"></i> 連線 Supabase</button>
             <button class="trip-action-btn danger" id="cloud-disable-btn" style="display:none"><i class="ti ti-cloud-off"></i> 停用</button>
           </div>
@@ -1292,6 +1302,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
             <span><i class="ti ti-list"></i> 雲端旅程清單</span>
             <span style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="trip-action-btn secondary" id="cloud-refresh-list-btn"><i class="ti ti-refresh"></i> 重新整理</button>
+              <button class="trip-action-btn secondary" id="cloud-toggle-archived-btn"><i class="ti ti-archive"></i> 顯示封存</button>
               <button class="trip-action-btn" id="cloud-new-trip-btn"><i class="ti ti-plus"></i> 新增雲端旅程</button>
             </span>
           </div>
@@ -1728,6 +1739,10 @@ let cloudApplying=false;
 let cloudSaveTimer=null;
 let cloudTripListCache=[];
 let cloudTripListLoaded=false;
+let cloudShowArchived=false;
+let cloudAccessInfo={editTokenHash:'',adminTokenHash:'',archived:false};
+let cloudEditUnlocked=false;
+let cloudAdminUnlocked=false;
 let gasSyncEnabled=params.get('sync')==='gas'||localStorage.getItem('tp_gas_enabled')==='1';
 let gasSyncConfig={url:'',actor:'',token:'',pollSec:6};
 let gasPollTimer=null;
@@ -1765,10 +1780,21 @@ function gasLockExpiresAt(lock=gasLockState.lock){
   const t=lock?.expiresAt?new Date(lock.expiresAt).getTime():0;
   return Number.isFinite(t)?t:0;
 }
-function canEdit(){return accessMode==='edit'&&(!isGasLockRequired()||gasLockState.hasLock);}
+function isCloudEditLocked(){
+  return cloudEnabled&&!!cloudAccessInfo.editTokenHash&&!cloudEditUnlocked&&!cloudAdminUnlocked;
+}
+function canEdit(){
+  if(accessMode!=='edit')return false;
+  if(isGasLockRequired()&&!gasLockState.hasLock)return false;
+  if(cloudEnabled&&cloudAccessInfo.archived&&!cloudAdminUnlocked)return false;
+  if(isCloudEditLocked())return false;
+  return true;
+}
 function requireEdit(action='修改行程'){
   if(canEdit())return true;
-  if(isGasLockRequired())showToast(`請先按「開始編輯」取得編輯鎖，才能${action}`);
+  if(cloudEnabled&&cloudAccessInfo.archived&&!cloudAdminUnlocked)showToast(`此旅程已封存，需管理者解鎖才能${action}`);
+  else if(isCloudEditLocked())showToast(`請先輸入編輯密碼，才能${action}`);
+  else if(isGasLockRequired())showToast(`請先按「開始編輯」取得編輯鎖，才能${action}`);
   else showToast(`目前是純檢視模式，無法${action}`);
   return false;
 }
@@ -1866,6 +1892,9 @@ function setStandaloneMode(){
   if(cloudUnsub){cloudUnsub();cloudUnsub=null;}
   cloudEnabled=false;
   cloudDocRef=null;
+  cloudAccessInfo={editTokenHash:'',adminTokenHash:'',archived:false};
+  cloudEditUnlocked=false;
+  cloudAdminUnlocked=false;
   localStorage.setItem('tp_cloud_enabled','0');
 }
 function shareBaseUrl(){
@@ -1953,12 +1982,29 @@ function updateAccessUI(){
     else mobileAccessLabel.textContent=canEdit()?'切換純檢視':'切換可編輯';
   }
   const tripLbl=document.getElementById('trip-id-label');
-  if(tripLbl)tripLbl.textContent=`${gasSyncEnabled?'Google Drive JSON':cloudEnabled?'雲端':'本機'}：${currentTripId}`;
+  if(tripLbl){
+    const lock=cloudEnabled&&cloudAccessInfo.editTokenHash&&!cloudEditUnlocked&&!cloudAdminUnlocked?' · 需密碼':'';
+    const archived=cloudEnabled&&cloudAccessInfo.archived?' · 已封存':'';
+    tripLbl.textContent=`${gasSyncEnabled?'Google Drive JSON':cloudEnabled?'雲端':'本機'}：${currentTripId}${lock}${archived}`;
+  }
+  updateCloudAccessUI();
 }
-function toggleAccessMode(){
+async function toggleAccessMode(){
   if(isGasLockRequired()){
     if(gasLockState.hasLock)saveAndReleaseGasEdit();
     else acquireGasLock();
+    return;
+  }
+  if(cloudEnabled&&!canEdit()&&accessMode==='edit'&&isCloudEditLocked()){
+    await unlockCloudEdit();
+    return;
+  }
+  if(cloudEnabled&&accessMode==='view'){
+    accessMode='edit';
+    replaceUrlForCurrentTrip();
+    if(isCloudEditLocked())await unlockCloudEdit();
+    updateAccessUI();
+    renderSidebar();
     return;
   }
   const next=canEdit()?'view':'edit';
@@ -2175,6 +2221,143 @@ async function ensureCloudClient(){
   }
   return cloudDb;
 }
+function tokenStorageKey(kind,id=currentTripId){
+  return `tp_${kind}_token_${sanitizeTripId(id)}`;
+}
+async function hashCloudToken(id,token){
+  const text=`travel-planner:${sanitizeTripId(id)}:${token||''}`;
+  if(window.crypto?.subtle){
+    const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
+    return [...new Uint8Array(bytes)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  let h=0;
+  for(let i=0;i<text.length;i++)h=Math.imul(31,h)+text.charCodeAt(i)|0;
+  return `fallback-${Math.abs(h)}`;
+}
+function setCloudAccessFromTrip(trip={}){
+  cloudAccessInfo={
+    editTokenHash:trip.edit_token_hash||'',
+    adminTokenHash:trip.admin_token_hash||'',
+    archived:!!trip.archived
+  };
+  cloudEditUnlocked=!cloudAccessInfo.editTokenHash||localStorage.getItem(tokenStorageKey('edit'))===cloudAccessInfo.editTokenHash;
+  cloudAdminUnlocked=!!cloudAccessInfo.adminTokenHash&&localStorage.getItem(tokenStorageKey('admin'))===cloudAccessInfo.adminTokenHash;
+}
+async function loadCloudAccessForTrip(id=currentTripId){
+  const db=await ensureCloudClient();
+  const {data,error}=await db.from('trips').select('id,edit_token_hash,admin_token_hash,archived').eq('id',id).maybeSingle();
+  if(error)throw error;
+  if(id===currentTripId)setCloudAccessFromTrip(data||{});
+  return data||{};
+}
+function updateCloudAccessUI(){
+  const editBtn=document.getElementById('cloud-edit-unlock-btn');
+  const adminBtn=document.getElementById('cloud-admin-unlock-btn');
+  const manageBtn=document.getElementById('cloud-token-manage-btn');
+  const archiveBtn=document.getElementById('cloud-archive-current-btn');
+  const archivedToggle=document.getElementById('cloud-toggle-archived-btn');
+  if(editBtn){
+    editBtn.style.display=cloudAccessInfo.editTokenHash&&accessMode==='edit'&&!cloudEditUnlocked&&!cloudAdminUnlocked?'inline-flex':'none';
+    editBtn.innerHTML='<i class="ti ti-lock-open"></i> 輸入編輯密碼';
+  }
+  if(adminBtn){
+    adminBtn.classList.toggle('secondary',!cloudAdminUnlocked);
+    adminBtn.innerHTML=cloudAdminUnlocked?'<i class="ti ti-shield-check"></i> 管理者已解鎖':'<i class="ti ti-shield-lock"></i> 管理者';
+  }
+  if(manageBtn)manageBtn.style.display=cloudAdminUnlocked||!cloudAccessInfo.adminTokenHash?'inline-flex':'none';
+  if(archiveBtn){
+    archiveBtn.style.display=cloudAdminUnlocked?'inline-flex':'none';
+    archiveBtn.innerHTML=cloudAccessInfo.archived?'<i class="ti ti-archive-off"></i> 取消封存目前旅程':'<i class="ti ti-archive"></i> 封存目前旅程';
+  }
+  if(archivedToggle)archivedToggle.innerHTML=cloudShowArchived?'<i class="ti ti-archive-off"></i> 隱藏封存':'<i class="ti ti-archive"></i> 顯示封存';
+}
+async function unlockCloudEdit(id=currentTripId,hash=cloudAccessInfo.editTokenHash){
+  if(!hash){
+    cloudEditUnlocked=true;
+    updateAccessUI();
+    return true;
+  }
+  const token=prompt('請輸入這趟旅程的編輯密碼：');
+  if(token===null)return false;
+  const hashed=await hashCloudToken(id,token);
+  if(hashed!==hash){
+    showToast('編輯密碼不正確');
+    return false;
+  }
+  localStorage.setItem(tokenStorageKey('edit',id),hashed);
+  if(id===currentTripId)cloudEditUnlocked=true;
+  updateAccessUI();
+  showToast('已取得編輯權限');
+  return true;
+}
+async function unlockCloudAdmin(id=currentTripId,hash=cloudAccessInfo.adminTokenHash){
+  if(!hash){
+    const token=prompt('這趟旅程尚未設定管理者密碼。請建立管理者密碼：');
+    if(!token)return false;
+    const hashed=await hashCloudToken(id,token);
+    const db=await ensureCloudClient();
+    const {error}=await db.from('trips').update({admin_token_hash:hashed,updated_at:new Date().toISOString(),updated_by:gasSyncConfig.actor||'admin'}).eq('id',id);
+    if(error)throw error;
+    if(id===currentTripId){
+      cloudAccessInfo.adminTokenHash=hashed;
+      cloudAdminUnlocked=true;
+    }
+    localStorage.setItem(tokenStorageKey('admin',id),hashed);
+    showToast('已建立並解鎖管理者權限');
+    refreshCloudTripList({silent:true});
+    updateAccessUI();
+    return true;
+  }
+  const token=prompt('請輸入管理者密碼：');
+  if(token===null)return false;
+  const hashed=await hashCloudToken(id,token);
+  if(hashed!==hash){
+    showToast('管理者密碼不正確');
+    return false;
+  }
+  localStorage.setItem(tokenStorageKey('admin',id),hashed);
+  if(id===currentTripId)cloudAdminUnlocked=true;
+  updateAccessUI();
+  showToast('管理者已解鎖');
+  return true;
+}
+async function manageCloudTokens(){
+  if(!await unlockCloudAdmin())return;
+  const newEdit=prompt('設定新的編輯密碼。留空代表移除編輯密碼：');
+  if(newEdit===null)return;
+  const patch={
+    edit_token_hash:newEdit?await hashCloudToken(currentTripId,newEdit):null,
+    updated_at:new Date().toISOString(),
+    updated_by:gasSyncConfig.actor||localStorage.getItem('tp_actor_name')||'admin'
+  };
+  const newAdmin=prompt('若要更換管理者密碼，請輸入新密碼；不更換請直接取消。');
+  if(newAdmin!==null&&newAdmin.trim())patch.admin_token_hash=await hashCloudToken(currentTripId,newAdmin.trim());
+  const db=await ensureCloudClient();
+  const {error}=await db.from('trips').update(patch).eq('id',currentTripId);
+  if(error)throw error;
+  if(patch.edit_token_hash)localStorage.setItem(tokenStorageKey('edit'),patch.edit_token_hash);
+  else localStorage.removeItem(tokenStorageKey('edit'));
+  if(patch.admin_token_hash)localStorage.setItem(tokenStorageKey('admin'),patch.admin_token_hash);
+  await loadCloudAccessForTrip();
+  refreshCloudTripList({silent:true});
+  updateAccessUI();
+  showToast('權限密碼已更新');
+}
+async function setCloudArchived(id=currentTripId,archived=true){
+  const meta=id===currentTripId?cloudAccessInfo:await loadCloudAccessForTrip(id);
+  if(!await unlockCloudAdmin(id,meta.admin_token_hash||meta.adminTokenHash||''))return;
+  const db=await ensureCloudClient();
+  const {error}=await db.from('trips').update({
+    archived,
+    updated_at:new Date().toISOString(),
+    updated_by:gasSyncConfig.actor||localStorage.getItem('tp_actor_name')||'admin'
+  }).eq('id',id);
+  if(error)throw error;
+  if(id===currentTripId)cloudAccessInfo.archived=archived;
+  await refreshCloudTripList({silent:true});
+  updateAccessUI();
+  showToast(archived?'已封存旅程':'已取消封存');
+}
 function renderCloudTripList(){
   const list=document.getElementById('cloud-trip-list');
   if(!list)return;
@@ -2191,26 +2374,40 @@ function renderCloudTripList(){
     return;
   }
   list.innerHTML='';
-  cloudTripListCache.forEach(meta=>{
+  const visibleTrips=cloudTripListCache.filter(meta=>cloudShowArchived||!meta.archived);
+  if(!visibleTrips.length){
+    list.innerHTML='<div class="cloud-status">目前沒有未封存旅程。可按「顯示封存」查看封存資料。</div>';
+    return;
+  }
+  visibleTrips.forEach(meta=>{
     const id=sanitizeTripId(meta.id||'');
     if(!id)return;
     const row=document.createElement('div');
-    row.className='trip-row cloud-trip'+(id===currentTripId&&cloudEnabled?' active':'');
+    row.className='trip-row cloud-trip'+(id===currentTripId&&cloudEnabled?' active':'')+(meta.archived?' archived':'');
     const updated=meta.updated_at?new Date(meta.updated_at).toLocaleString('zh-TW'):'未更新';
     const by=meta.updated_by?` · ${esc(meta.updated_by)}`:'';
+    const locked=!!meta.edit_token_hash;
+    const stateBadges=[
+      `<span class="trip-id-chip">${esc(id)}</span>`,
+      locked?'<span class="trip-state-chip locked">需編輯密碼</span>':'<span class="trip-state-chip">公開編輯</span>',
+      meta.archived?'<span class="trip-state-chip archived">已封存</span>':''
+    ].join('');
     row.innerHTML=`
       <div>
         <div class="trip-row-title">${esc(meta.title||id)}</div>
-        <div class="trip-row-meta">${esc(id)} · ${esc(updated)}${by}</div>
+        <div class="trip-row-meta">${stateBadges}</div>
+        <div class="trip-row-meta">${esc(updated)}${by}</div>
       </div>
       <div class="trip-row-actions">
         <button class="trip-action-btn secondary" data-action="view"><i class="ti ti-eye"></i> 檢視</button>
         <button class="trip-action-btn" data-action="edit"><i class="ti ti-edit"></i> 編輯</button>
+        <button class="trip-action-btn secondary" data-action="archive"><i class="ti ${meta.archived?'ti-archive-off':'ti-archive'}"></i> ${meta.archived?'取消封存':'封存'}</button>
         <button class="trip-action-btn secondary" data-action="copy-view"><i class="ti ti-copy"></i> 檢視連結</button>
         <button class="trip-action-btn secondary" data-action="copy-edit"><i class="ti ti-copy"></i> 編輯連結</button>
       </div>`;
     row.querySelector('[data-action="view"]').onclick=()=>openCloudTrip(id,'view');
     row.querySelector('[data-action="edit"]').onclick=()=>openCloudTrip(id,'edit');
+    row.querySelector('[data-action="archive"]').onclick=()=>setCloudArchived(id,!meta.archived);
     row.querySelector('[data-action="copy-view"]').onclick=()=>copyText(tripUrl(id,'view',{cloud:true,sync:false}));
     row.querySelector('[data-action="copy-edit"]').onclick=()=>copyText(tripUrl(id,'edit',{cloud:true,sync:false}));
     row.onclick=e=>{
@@ -2225,7 +2422,7 @@ async function refreshCloudTripList({silent=false}={}){
   if(!silent&&list)list.innerHTML='<div class="cloud-status sync">正在讀取 Supabase 旅程清單…</div>';
   try{
     const db=await ensureCloudClient();
-    const {data,error}=await db.from('trips').select('id,title,updated_at,updated_by,schema').order('updated_at',{ascending:false}).limit(100);
+    const {data,error}=await db.from('trips').select('id,title,updated_at,updated_by,schema,archived,edit_token_hash,admin_token_hash').order('updated_at',{ascending:false}).limit(100);
     if(error)throw error;
     cloudTripListCache=data||[];
     cloudTripListLoaded=true;
@@ -2254,6 +2451,15 @@ async function openCloudTrip(id,mode='view'){
   renderTripModal();
   updateAccessUI();
   await initCloudSync();
+  if(mode==='edit'&&isCloudEditLocked()){
+    await unlockCloudEdit(id,cloudAccessInfo.editTokenHash);
+  }
+  if(mode==='edit'&&cloudAccessInfo.archived&&!cloudAdminUnlocked){
+    showToast('此旅程已封存，會以檢視模式開啟');
+    accessMode='view';
+    replaceUrlForCurrentTrip();
+  }
+  updateAccessUI();
 }
 async function reloadCurrentCloudTrip(){
   try{
@@ -2283,6 +2489,9 @@ async function createNewCloudTrip(){
   const title=prompt('新雲端旅程名稱：','新的旅行');
   if(!title)return;
   const id=sanitizeTripId(prompt('旅程 ID：',`${title}-${new Date().toISOString().slice(0,10)}`)||title);
+  const adminToken=prompt('設定管理者密碼（之後可管理密碼與封存）：');
+  if(!adminToken)return;
+  const editToken=prompt('設定編輯密碼（留空代表暫時公開編輯）：')||'';
   cloudEnabled=true;
   localStorage.setItem('tp_cloud_enabled','1');
   clearInterval(gasPollTimer);
@@ -2294,6 +2503,15 @@ async function createNewCloudTrip(){
   accessMode='edit';
   currentTripTitle=title.trim()||'新的旅行';
   currentTripId=id;
+  cloudAccessInfo={
+    editTokenHash:editToken?await hashCloudToken(currentTripId,editToken):'',
+    adminTokenHash:await hashCloudToken(currentTripId,adminToken),
+    archived:false
+  };
+  cloudEditUnlocked=true;
+  cloudAdminUnlocked=true;
+  if(cloudAccessInfo.editTokenHash)localStorage.setItem(tokenStorageKey('edit'),cloudAccessInfo.editTokenHash);
+  localStorage.setItem(tokenStorageKey('admin'),cloudAccessInfo.adminTokenHash);
   resetTripData();
   recordActivity('create_cloud_trip',{title:currentTripTitle,currentTripId});
   saveLocal();
@@ -3201,6 +3419,7 @@ async function fetchCloudTripState(){
   const {data:trip,error:tripError}=await cloudDb.from('trips').select('*').eq('id',currentTripId).maybeSingle();
   if(tripError)throw tripError;
   if(!trip)return null;
+  setCloudAccessFromTrip(trip);
   const {data:dayRows,error:dayError}=await cloudDb.from('days').select('*').eq('trip_id',currentTripId).order('day_index');
   if(dayError)throw dayError;
   if(dayRows?.length){
@@ -3300,7 +3519,10 @@ async function pushCloudState(){
       use_api_key:!!state.data?.useApiKey,
       updated_at:state.updatedAt,
       updated_by:state.updatedBy,
-      schema:state.schema
+      schema:state.schema,
+      archived:!!cloudAccessInfo.archived,
+      edit_token_hash:cloudAccessInfo.editTokenHash||null,
+      admin_token_hash:cloudAccessInfo.adminTokenHash||null
     };
     const {error}=await cloudDb.from('trips').upsert(row,{onConflict:'id'});
     if(error)throw error;
@@ -3311,7 +3533,10 @@ async function pushCloudState(){
       updated_at:finalUpdatedAt,
       updated_by:state.updatedBy,
       schema:SUPABASE_SCHEMA_VERSION,
-      payload:{schema:SUPABASE_SCHEMA_VERSION,migratedAt:finalUpdatedAt}
+      payload:{schema:SUPABASE_SCHEMA_VERSION,migratedAt:finalUpdatedAt},
+      archived:!!cloudAccessInfo.archived,
+      edit_token_hash:cloudAccessInfo.editTokenHash||null,
+      admin_token_hash:cloudAccessInfo.adminTokenHash||null
     }).eq('id',currentTripId);
     if(touchError)throw touchError;
     setCloudStatus(`Supabase 已同步多表資料：trips/${currentTripId}`,'ok');
@@ -5418,6 +5643,11 @@ document.getElementById('gas-abandon-btn').onclick=abandonGasEdit;
 document.getElementById('gas-disable-btn').onclick=disableGasSync;
 document.getElementById('cloud-refresh-list-btn').onclick=()=>refreshCloudTripList({silent:false});
 document.getElementById('cloud-new-trip-btn').onclick=createNewCloudTrip;
+document.getElementById('cloud-toggle-archived-btn').onclick=()=>{cloudShowArchived=!cloudShowArchived;renderCloudTripList();updateCloudAccessUI();};
+document.getElementById('cloud-edit-unlock-btn').onclick=()=>unlockCloudEdit();
+document.getElementById('cloud-admin-unlock-btn').onclick=()=>unlockCloudAdmin();
+document.getElementById('cloud-token-manage-btn').onclick=manageCloudTokens;
+document.getElementById('cloud-archive-current-btn').onclick=()=>setCloudArchived(currentTripId,!cloudAccessInfo.archived);
 document.getElementById('cloud-enable-btn').onclick=enableCloudFromModal;
 document.getElementById('cloud-reload-btn').onclick=reloadCurrentCloudTrip;
 document.getElementById('cloud-disable-btn').onclick=disableCloud;
