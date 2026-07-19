@@ -707,11 +707,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .access-badge.edit{background:var(--primary-soft);color:var(--primary-strong);border-color:var(--primary)}
 .access-badge.view{background:#F7F8F9;color:#5F6368;border-color:#D8DADC}
 .trip-id-badge{font-size:10px;font-weight:700;color:var(--muted);background:var(--surface-soft);border:1px solid var(--line-soft);border-radius:6px;padding:2px 7px;white-space:nowrap}
-.trip-name-btn{border:none;background:transparent;color:var(--text);font:inherit;font-weight:850;display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:2px 4px;border-radius:6px}
-.trip-name-btn:hover{background:var(--surface-soft);color:var(--primary-strong)}
+.trip-name-label{color:var(--text);font:inherit;font-weight:850;display:inline-flex;align-items:center;gap:6px;padding:2px 4px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .trip-manager-btn{font-size:11px;padding:3px 9px;border-radius:7px;font-weight:700;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--muted);display:flex;align-items:center;gap:4px;white-space:nowrap}
 .trip-manager-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
-body.supabase-bound #trip-manager-btn{display:none}
 body.view-only .edit-only,
 body.view-only #search-bar,
 body.view-only .mobile-search-wrap,
@@ -1244,7 +1242,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
 <body class="supabase-bound">
 <div id="titlebar">
   <i class="ti ti-map-2 logo"></i> 旅遊行程規劃
-  <button class="trip-name-btn" id="trip-name-btn" title="旅程管理"><span id="title-trip-name">旅遊行程規劃</span><i class="ti ti-settings"></i></button>
+  <span class="trip-name-label" id="trip-name-label"><span id="title-trip-name">旅遊行程規劃</span></span>
   <span class="sub">每段路程可單獨設定交通方式</span>
   <span class="trip-id-badge" id="trip-id-label">本機旅程</span>
   <div id="titlebar-right">
@@ -5371,7 +5369,6 @@ document.getElementById('mobile-summary-btn').onclick=showSummary;
 document.getElementById('mobile-sheet-handle').onclick=cycleMobileSheet;
 document.getElementById('ui-mode-btn').onclick=cycleUiMode;
 document.getElementById('access-mode-btn').onclick=toggleAccessMode;
-document.getElementById('trip-name-btn').onclick=openTripModal;
 document.getElementById('trip-manager-btn').onclick=openTripModal;
 document.getElementById('mobile-ui-mode-btn').onclick=()=>{cycleUiMode();document.getElementById('mobile-actions-menu').classList.remove('open');};
 document.getElementById('mobile-access-mode').onclick=()=>{toggleAccessMode();document.getElementById('mobile-actions-menu').classList.remove('open');};
