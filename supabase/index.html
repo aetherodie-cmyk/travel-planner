@@ -1283,6 +1283,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
           <div class="trip-help"><b>目前主要資料來源：</b>Supabase 會成為多人共編的雲端正本。旅伴使用同一個行程連結即可看到更新；編輯版會直接寫入資料庫的多張資料表。</div>
           <div class="trip-action-row">
             <button class="trip-action-btn" id="cloud-enable-btn"><i class="ti ti-cloud-upload"></i> 連線 Supabase</button>
+            <button class="trip-action-btn secondary" id="cloud-reload-btn"><i class="ti ti-download"></i> 從雲端載入</button>
             <button class="trip-action-btn secondary" id="cloud-push-btn"><i class="ti ti-upload"></i> 建立 / 更新雲端正本</button>
             <button class="trip-action-btn danger" id="cloud-disable-btn"><i class="ti ti-cloud-off"></i> 停用</button>
           </div>
@@ -2238,6 +2239,30 @@ async function openCloudTrip(id,mode='view'){
   renderTripModal();
   updateAccessUI();
   await initCloudSync();
+}
+async function reloadCurrentCloudTrip(){
+  try{
+    cloudEnabled=true;
+    localStorage.setItem('tp_cloud_enabled','1');
+    setCloudStatus('正在從 Supabase 載入目前旅程…','sync');
+    await ensureCloudClient();
+    cloudDocRef=currentTripId;
+    const remoteState=await fetchCloudTripState();
+    if(!remoteState?.data?.days){
+      setCloudStatus(`Supabase 找不到旅程資料：trips/${currentTripId}`,'err');
+      return;
+    }
+    cloudApplying=true;
+    applyTripState(remoteState,{persist:true,render:true});
+    cloudApplying=false;
+    replaceUrlForCurrentTrip();
+    renderTripModal();
+    updateAccessUI();
+    setCloudStatus(`已從 Supabase 載入：trips/${currentTripId}`,'ok');
+  }catch(e){
+    cloudApplying=false;
+    setCloudStatus(`從 Supabase 載入失敗：${e.message}`,'err');
+  }
 }
 async function createNewCloudTrip(){
   const title=prompt('新雲端旅程名稱：','新的旅行');
@@ -5379,6 +5404,7 @@ document.getElementById('gas-disable-btn').onclick=disableGasSync;
 document.getElementById('cloud-refresh-list-btn').onclick=()=>refreshCloudTripList({silent:false});
 document.getElementById('cloud-new-trip-btn').onclick=createNewCloudTrip;
 document.getElementById('cloud-enable-btn').onclick=enableCloudFromModal;
+document.getElementById('cloud-reload-btn').onclick=reloadCurrentCloudTrip;
 document.getElementById('cloud-disable-btn').onclick=disableCloud;
 document.getElementById('cloud-push-btn').onclick=async()=>{
   if(!cloudEnabled){
