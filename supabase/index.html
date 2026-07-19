@@ -3348,6 +3348,44 @@ async function insertCloudRows(rows){
     if(error)throw error;
   }
 }
+async function countCloudChildRows(table,tripId){
+  const {count,error}=await cloudDb.from(table).select('id',{count:'exact',head:true}).eq('trip_id',tripId);
+  if(error)throw error;
+  return count||0;
+}
+function supabaseInList(ids){
+  return `(${ids.map(id=>`"${String(id).replace(/"/g,'\\"')}"`).join(',')})`;
+}
+async function deleteStaleCloudRows(table,tripId,keepIds){
+  if(!keepIds.length)return;
+  const {error}=await cloudDb.from(table).delete().eq('trip_id',tripId).not('id','in',supabaseInList(keepIds));
+  if(error)throw error;
+}
+async function replaceCloudRowsSafely(tripId,rows){
+  const remotePlaceCount=await countCloudChildRows('places',tripId);
+  if(!rows.placeRows.length&&remotePlaceCount>0){
+    throw new Error('目前畫面沒有景點，已停止儲存，避免清空雲端既有景點。請先從雲端重新載入或匯入備份 JSON。');
+  }
+  if(rows.dayRows.length){
+    const {error}=await cloudDb.from('days').upsert(rows.dayRows,{onConflict:'id'});
+    if(error)throw error;
+    await deleteStaleCloudRows('days',tripId,rows.dayRows.map(r=>r.id));
+  }
+  if(rows.placeRows.length){
+    const {error}=await cloudDb.from('places').upsert(rows.placeRows,{onConflict:'id'});
+    if(error)throw error;
+    await deleteStaleCloudRows('places',tripId,rows.placeRows.map(r=>r.id));
+  }
+  if(rows.segmentRows.length){
+    const {error}=await cloudDb.from('route_segments').upsert(rows.segmentRows,{onConflict:'id'});
+    if(error)throw error;
+    await deleteStaleCloudRows('route_segments',tripId,rows.segmentRows.map(r=>r.id));
+  }
+  if(rows.logRows.length){
+    const {error}=await cloudDb.from('trip_logs').upsert(rows.logRows,{onConflict:'id'});
+    if(error)throw error;
+  }
+}
 function stateFromCloudRows(trip,dayRows=[],placeRows=[],segmentRows=[],logRows=[]){
   const byDay=new Map();
   const nextSegByFrom=new Map();
@@ -3527,10 +3565,9 @@ async function pushCloudState(){
       edit_token_hash:cloudAccessInfo.editTokenHash||null,
       admin_token_hash:cloudAccessInfo.adminTokenHash||null
     };
+    await replaceCloudRowsSafely(currentTripId,rows);
     const {error}=await cloudDb.from('trips').upsert(row,{onConflict:'id'});
     if(error)throw error;
-    await deleteCloudChildRows(currentTripId);
-    await insertCloudRows(rows);
     const finalUpdatedAt=new Date().toISOString();
     const {error:touchError}=await cloudDb.from('trips').update({
       updated_at:finalUpdatedAt,
@@ -3652,7 +3689,7 @@ function renderMarkers(){
     });
   });
   updateMapScopeUI();
-  updateTotals();saveLocal();
+  updateTotals();
 }
 
 /* ═══════════════ SIDEBAR ═══════════════ */
