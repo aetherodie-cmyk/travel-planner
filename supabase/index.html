@@ -711,6 +711,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .trip-name-btn:hover{background:var(--surface-soft);color:var(--primary-strong)}
 .trip-manager-btn{font-size:11px;padding:3px 9px;border-radius:7px;font-weight:700;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--muted);display:flex;align-items:center;gap:4px;white-space:nowrap}
 .trip-manager-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
+body.supabase-bound #trip-manager-btn{display:none}
 body.view-only .edit-only,
 body.view-only #search-bar,
 body.view-only .mobile-search-wrap,
@@ -979,6 +980,7 @@ body.view-only .empty-day small{display:none}
 .trip-list{display:flex;flex-direction:column;gap:7px}
 .trip-list.cloud{margin-bottom:12px}
 .trip-row{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.trip-row.cloud-trip{cursor:pointer}
 .trip-row.active{border-color:var(--primary);background:var(--primary-soft)}
 .trip-row.cloud-trip{border-color:#D5E3F3;background:#F8FBFF}
 .trip-row.cloud-trip.active{border-color:#378ADD;background:#EFF6FD}
@@ -1239,7 +1241,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
 @keyframes busy-bar{0%{transform:translateX(-110%)}50%{transform:translateX(70%)}100%{transform:translateX(240%)}}
 </style>
 </head>
-<body>
+<body class="supabase-bound">
 <div id="titlebar">
   <i class="ti ti-map-2 logo"></i> 旅遊行程規劃
   <button class="trip-name-btn" id="trip-name-btn" title="旅程管理"><span id="title-trip-name">旅遊行程規劃</span><i class="ti ti-settings"></i></button>
@@ -1282,10 +1284,10 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         <div class="trip-panel-body">
           <div class="trip-help"><b>目前主要資料來源：</b>Supabase 會成為多人共編的雲端正本。旅伴使用同一個行程連結即可看到更新；編輯版會直接寫入資料庫的多張資料表。</div>
           <div class="trip-action-row">
-            <button class="trip-action-btn" id="cloud-enable-btn"><i class="ti ti-cloud-upload"></i> 連線 Supabase</button>
             <button class="trip-action-btn secondary" id="cloud-reload-btn"><i class="ti ti-download"></i> 從雲端載入</button>
-            <button class="trip-action-btn secondary" id="cloud-push-btn"><i class="ti ti-upload"></i> 建立 / 更新雲端正本</button>
-            <button class="trip-action-btn danger" id="cloud-disable-btn"><i class="ti ti-cloud-off"></i> 停用</button>
+            <button class="trip-action-btn secondary" id="cloud-push-btn"><i class="ti ti-upload"></i> 儲存到 Supabase</button>
+            <button class="trip-action-btn" id="cloud-enable-btn" style="display:none"><i class="ti ti-cloud-upload"></i> 連線 Supabase</button>
+            <button class="trip-action-btn danger" id="cloud-disable-btn" style="display:none"><i class="ti ti-cloud-off"></i> 停用</button>
           </div>
           <div class="cloud-status" id="cloud-status">尚未連接 Supabase。資料表建立後，這個新版站台就會使用 Supabase 作為共編資料庫。</div>
           <div class="trip-section-title" style="justify-content:space-between">
@@ -1703,6 +1705,7 @@ const CLOUD_CONFIG_KEY='tp_cloud_config';
 const GAS_SYNC_KEY='tp_gas_sync_config';
 const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/supabase/';
 const APP_VERSION='20260719-supabase-collab';
+const SUPABASE_BOUND_APP=true;
 const SUPABASE_CONFIG={
   url:'https://pxoovfsvvmfxwibjtsvv.supabase.co',
   anonKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4b292ZnN2dm1meHdpYmp0c3Z2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ0MzI0NzksImV4cCI6MjEwMDAwODQ3OX0.ZgEQCr9ni7c2xJQHuJh8LytL9gXf0LM2pDpYjfCJ-zU'
@@ -1717,7 +1720,7 @@ let currentTripId=sanitizeTripId(requestedTripIdParam||localStorage.getItem('tp_
 let currentTripTitle='旅遊行程規劃';
 let activityLog=[];
 let accessMode=params.get('mode')==='view'?'view':'edit';
-let cloudEnabled=params.get('cloud')==='1'||localStorage.getItem('tp_cloud_enabled')==='1';
+let cloudEnabled=SUPABASE_BOUND_APP&&params.get('standalone')!=='1'?true:(params.get('cloud')==='1'||localStorage.getItem('tp_cloud_enabled')==='1');
 let cloudConfig=null;
 let cloudDb=null;
 let cloudDocRef=null;
@@ -1875,8 +1878,13 @@ function tripUrl(id=currentTripId,mode=accessMode,{cloud=cloudEnabled,sync=(gasS
   const url=new URL(shareBaseUrl());
   url.searchParams.set('trip',id);
   url.searchParams.set('mode',mode);
-  if(cloud)url.searchParams.set('cloud','1');
-  else url.searchParams.delete('cloud');
+  if(cloud){
+    url.searchParams.set('cloud','1');
+    url.searchParams.delete('standalone');
+  }else{
+    url.searchParams.delete('cloud');
+    if(SUPABASE_BOUND_APP)url.searchParams.set('standalone','1');
+  }
   if(sync){
     url.searchParams.set('sync','gas');
     if(gasSyncConfig.url)url.searchParams.set('gasUrl',gasSyncConfig.url);
@@ -1892,8 +1900,13 @@ function replaceUrlForCurrentTrip(){
   url.searchParams.set('trip',currentTripId);
   url.searchParams.set('mode',accessMode);
   url.searchParams.set('v',APP_VERSION);
-  if(cloudEnabled)url.searchParams.set('cloud','1');
-  else url.searchParams.delete('cloud');
+  if(cloudEnabled){
+    url.searchParams.set('cloud','1');
+    url.searchParams.delete('standalone');
+  }else{
+    url.searchParams.delete('cloud');
+    if(SUPABASE_BOUND_APP)url.searchParams.set('standalone','1');
+  }
   if(gasSyncEnabled){
     url.searchParams.set('sync','gas');
     if(gasSyncConfig.url)url.searchParams.set('gasUrl',gasSyncConfig.url);
@@ -2202,6 +2215,10 @@ function renderCloudTripList(){
     row.querySelector('[data-action="edit"]').onclick=()=>openCloudTrip(id,'edit');
     row.querySelector('[data-action="copy-view"]').onclick=()=>copyText(tripUrl(id,'view',{cloud:true,sync:false}));
     row.querySelector('[data-action="copy-edit"]').onclick=()=>copyText(tripUrl(id,'edit',{cloud:true,sync:false}));
+    row.onclick=e=>{
+      if(e.target.closest('button'))return;
+      openCloudTrip(id,accessMode==='edit'?'edit':'view');
+    };
     list.appendChild(row);
   });
 }
@@ -2288,6 +2305,7 @@ async function createNewCloudTrip(){
   renderTripModal();
   updateAccessUI();
   await initCloudSync();
+  await pushCloudState();
   await refreshCloudTripList({silent:true});
 }
 function renderGasTripList(){
@@ -5386,7 +5404,7 @@ document.getElementById('trip-modal').onclick=e=>{if(e.target===document.getElem
 document.getElementById('trip-save-btn').onclick=saveTripMeta;
 document.getElementById('trip-new-btn').onclick=createNewTrip;
 document.getElementById('trip-export-current-btn').onclick=exportJSON;
-document.getElementById('copy-standalone-url').onclick=()=>copyText(`${PUBLIC_APP_URL}?v=${APP_VERSION}`);
+document.getElementById('copy-standalone-url').onclick=()=>copyText(`${PUBLIC_APP_URL}?standalone=1&v=${APP_VERSION}`);
 document.getElementById('copy-edit-url').onclick=()=>{applyTripModalIdentity();collectGasInputs();copyText(tripUrl(currentTripId,'edit'));};
 document.getElementById('copy-view-url').onclick=()=>{applyTripModalIdentity();collectGasInputs();copyText(tripUrl(currentTripId,'view'));};
 document.getElementById('gas-list-btn').onclick=()=>refreshGasTripList({silent:false});
