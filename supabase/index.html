@@ -1551,16 +1551,16 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
     <div class="account-body">
       <div class="account-card">
         <div class="account-status-title" id="account-status-title">目前是純檢視</div>
-        <div class="account-status-meta" id="account-status-meta">拿到連結的人可以查看；輸入編輯密碼後才能修改。</div>
+        <div class="account-status-meta" id="account-status-meta">拿到連結的人可以查看；輸入名字與共用密碼後才能修改，系統會記錄最後修改者。</div>
       </div>
       <div class="account-form">
         <div class="account-field">
-          <label>你的暱稱</label>
-          <input id="account-name-input" placeholder="例：Iris"/>
+          <label>你的名字</label>
+          <input id="account-name-input" placeholder="例：Iris、家人A"/>
         </div>
         <div class="account-field" id="account-edit-token-wrap">
-          <label>編輯密碼</label>
-          <input id="account-edit-token" type="password" placeholder="輸入這趟旅程的編輯密碼"/>
+          <label>共用編輯密碼</label>
+          <input id="account-edit-token" type="password" placeholder="旅伴共用同一組密碼"/>
         </div>
         <div class="account-field">
           <label>管理者密碼</label>
@@ -1764,7 +1764,7 @@ const params=new URLSearchParams(location.search);
 const CLOUD_CONFIG_KEY='tp_cloud_config';
 const GAS_SYNC_KEY='tp_gas_sync_config';
 const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/supabase/';
-const APP_VERSION='20260719-permission-ui';
+const APP_VERSION='20260719-shared-password';
 const SUPABASE_BOUND_APP=true;
 const SUPABASE_CONFIG={
   url:'https://pxoovfsvvmfxwibjtsvv.supabase.co',
@@ -1856,7 +1856,7 @@ function recordActivity(action,detail={}){
   activityLog.unshift({
     id:'log_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
     time:new Date().toISOString(),
-    actor:gasSyncConfig.actor||localStorage.getItem('tp_actor_name')||'本機使用者',
+    actor:actorName()==='anonymous'?'本機使用者':actorName(),
     action,
     detail
   });
@@ -2324,7 +2324,7 @@ function updateCloudAccessUI(){
   const archivedToggle=document.getElementById('cloud-toggle-archived-btn');
   if(editBtn){
     editBtn.style.display=cloudAccessInfo.editTokenHash&&accessMode==='edit'&&!cloudEditUnlocked&&!cloudAdminUnlocked?'inline-flex':'none';
-    editBtn.innerHTML='<i class="ti ti-lock-open"></i> 輸入編輯密碼';
+    editBtn.innerHTML='<i class="ti ti-lock-open"></i> 登入編輯';
   }
   if(adminBtn){
     adminBtn.classList.toggle('secondary',!cloudAdminUnlocked);
@@ -2343,11 +2343,11 @@ async function unlockCloudEdit(id=currentTripId,hash=cloudAccessInfo.editTokenHa
     updateAccessUI();
     return true;
   }
-  const token=prompt('請輸入這趟旅程的編輯密碼：');
+  const token=prompt('請輸入這趟旅程的共用編輯密碼：');
   if(token===null)return false;
   const hashed=await hashCloudToken(id,token);
   if(hashed!==hash){
-    showToast('編輯密碼不正確');
+    showToast('共用編輯密碼不正確');
     return false;
   }
   localStorage.setItem(tokenStorageKey('edit',id),hashed);
@@ -2404,9 +2404,14 @@ function collectAccountName(){
     gasSyncConfig.actor=name;
     localStorage.setItem('tp_actor_name',name);
   }
+  return name;
 }
 async function loginCloudEditFromModal(){
-  collectAccountName();
+  const name=collectAccountName();
+  if(!name){
+    setAccountMessage('請先輸入你的名字，之後才知道是誰做了修改。','err');
+    return;
+  }
   try{
     if(!cloudEnabled){
       accessMode='edit';
@@ -2419,7 +2424,7 @@ async function loginCloudEditFromModal(){
     if(cloudAccessInfo.editTokenHash){
       const hashed=await hashCloudToken(currentTripId,token);
       if(hashed!==cloudAccessInfo.editTokenHash){
-        setAccountMessage('編輯密碼不正確。','err');
+        setAccountMessage('共用編輯密碼不正確。','err');
         return;
       }
       localStorage.setItem(tokenStorageKey('edit'),hashed);
@@ -2431,13 +2436,17 @@ async function loginCloudEditFromModal(){
     renderSidebar();
     renderAccountModal();
     setAccountMessage('已登入編輯。','ok');
-    showToast('已登入編輯');
+    showToast(`${name} 已登入編輯`);
   }catch(e){
     setAccountMessage(`登入失敗：${e.message}`,'err');
   }
 }
 async function loginCloudAdminFromModal(){
-  collectAccountName();
+  const name=collectAccountName();
+  if(!name){
+    setAccountMessage('請先輸入你的名字，管理操作也會記錄修改者。','err');
+    return;
+  }
   try{
     const token=document.getElementById('account-admin-token')?.value||'';
     if(!token){
@@ -2468,7 +2477,7 @@ async function loginCloudAdminFromModal(){
     refreshCloudTripList({silent:true});
     renderAccountModal();
     setAccountMessage('管理者已登入。','ok');
-    showToast('管理者已登入');
+    showToast(`${name} 已用管理者登入`);
   }catch(e){
     setAccountMessage(`管理者登入失敗：${e.message}`,'err');
   }
@@ -2491,7 +2500,7 @@ async function unlockCloudAdmin(id=currentTripId,hash=cloudAccessInfo.adminToken
     if(!token)return false;
     const hashed=await hashCloudToken(id,token);
     const db=await ensureCloudClient();
-    const {error}=await db.from('trips').update({admin_token_hash:hashed,updated_at:new Date().toISOString(),updated_by:gasSyncConfig.actor||'admin'}).eq('id',id);
+    const {error}=await db.from('trips').update({admin_token_hash:hashed,updated_at:new Date().toISOString(),updated_by:actorName()}).eq('id',id);
     if(error)throw error;
     if(id===currentTripId){
       cloudAccessInfo.adminTokenHash=hashed;
@@ -2518,12 +2527,12 @@ async function unlockCloudAdmin(id=currentTripId,hash=cloudAccessInfo.adminToken
 }
 async function manageCloudTokens(){
   if(!await unlockCloudAdmin())return;
-  const newEdit=prompt('設定新的編輯密碼。留空代表移除編輯密碼：');
+  const newEdit=prompt('設定新的共用編輯密碼。留空代表移除共用密碼：');
   if(newEdit===null)return;
   const patch={
     edit_token_hash:newEdit?await hashCloudToken(currentTripId,newEdit):null,
     updated_at:new Date().toISOString(),
-    updated_by:gasSyncConfig.actor||localStorage.getItem('tp_actor_name')||'admin'
+    updated_by:actorName()
   };
   const newAdmin=prompt('若要更換管理者密碼，請輸入新密碼；不更換請直接取消。');
   if(newAdmin!==null&&newAdmin.trim())patch.admin_token_hash=await hashCloudToken(currentTripId,newAdmin.trim());
@@ -2545,7 +2554,7 @@ async function setCloudArchived(id=currentTripId,archived=true){
   const {error}=await db.from('trips').update({
     archived,
     updated_at:new Date().toISOString(),
-    updated_by:gasSyncConfig.actor||localStorage.getItem('tp_actor_name')||'admin'
+    updated_by:actorName()
   }).eq('id',id);
   if(error)throw error;
   if(id===currentTripId)cloudAccessInfo.archived=archived;
@@ -2686,7 +2695,7 @@ async function createNewCloudTrip(){
   const id=sanitizeTripId(prompt('旅程 ID：',`${title}-${new Date().toISOString().slice(0,10)}`)||title);
   const adminToken=prompt('設定管理者密碼（之後可管理密碼與封存）：');
   if(!adminToken)return;
-  const editToken=prompt('設定編輯密碼（留空代表暫時公開編輯）：')||'';
+  const editToken=prompt('設定共用編輯密碼（旅伴輸入名字與這組密碼後即可修改；留空代表暫時不設密碼）：')||'';
   cloudEnabled=true;
   localStorage.setItem('tp_cloud_enabled','1');
   clearInterval(gasPollTimer);
@@ -3742,7 +3751,7 @@ async function pushCloudState({raise=false}={}){
     return false;
   }
   if(!canEdit()){
-    const err=new Error('目前不是可編輯狀態，請確認已用編輯連結進入並完成編輯密碼解鎖。');
+    const err=new Error('目前不是可編輯狀態，請先按「登入 / 權限」，輸入名字與共用編輯密碼。');
     setCloudStatus(err.message,'err');
     if(raise)throw err;
     return false;
@@ -3750,7 +3759,7 @@ async function pushCloudState({raise=false}={}){
   try{
     setCloudStatus('正在寫入 Supabase 多表資料…','sync');
     const state=makeTripState();
-    state.updatedBy=gasSyncConfig.actor||localStorage.getItem('tp_actor_name')||'anonymous';
+    state.updatedBy=actorName();
     state.storage='supabase-postgres';
     state.schema=SUPABASE_SCHEMA_VERSION;
     const rows=cloudRowsFromState(state);
@@ -5953,7 +5962,7 @@ document.getElementById('cloud-push-btn').onclick=async()=>{
       await initCloudSync();
     }
     if(!requireEdit('建立雲端正本')){
-      throw new Error('目前不是可編輯狀態。請用編輯連結進入，並確認已輸入編輯密碼。');
+      throw new Error('目前不是可編輯狀態。請先按「登入 / 權限」，輸入名字與共用編輯密碼。');
     }
     if(!cloudDocRef||!cloudDb){
       throw new Error('Supabase 尚未連線成功，無法儲存。');
