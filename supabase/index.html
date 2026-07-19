@@ -850,23 +850,24 @@ body.view-only .empty-day small{display:none}
 .seg-timeline{display:flex;flex-direction:column;align-items:center;width:26px;flex-shrink:0}
 .seg-vline{width:2px;flex:1;background:var(--line);margin:0 auto}
 .seg-body{flex:1;min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"main result";align-items:center;gap:5px 8px;padding:3px 0;border-radius:8px;background:transparent}
-.seg-connector.tools-open .seg-body,.seg-connector.seg-expanded .seg-body{grid-template-areas:"main result" ". actions" "editor editor";padding:8px 9px;background:#F6F7F8}
+.seg-connector.tools-open .seg-body,.seg-connector.seg-expanded .seg-body{grid-template-areas:"main result" "mode mode" "actions actions" "editor editor";padding:8px 9px;background:#F6F7F8}
 .seg-main{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:nowrap}
 .seg-main{grid-area:main}
 .seg-label{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;font-weight:900;white-space:nowrap;flex-shrink:0}
 .seg-label::before{display:none}
 .seg-more-btn{display:inline-flex;width:24px;height:24px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--muted);align-items:center;justify-content:center;font-size:14px;flex:0 0 auto;cursor:pointer}
 .seg-more-btn:hover,.seg-more-btn.active{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
-.seg-mode-btns{display:flex;gap:2px;flex-shrink:0}
-.seg-mode-btn{width:24px;height:20px;border:1px solid var(--line);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--surface-soft);color:#9AA0A6;padding:0;transition:all .12s}
-.seg-connector:not(.tools-open):not(.seg-expanded) .seg-mode-btn:not(.active){display:none}
+.seg-mode-btns{grid-area:mode;display:none;gap:2px;flex-shrink:0;justify-content:flex-start}
+.seg-connector.tools-open .seg-mode-btns,.seg-connector.seg-expanded .seg-mode-btns{display:flex}
+.seg-mode-btn{height:28px;min-width:62px;border:1px solid var(--line);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;background:var(--surface);color:#777C84;padding:0 8px;gap:4px;transition:all .12s}
 .seg-mode-btn:hover{border-color:var(--primary);color:var(--primary-strong)}
 .seg-mode-btn.active.walk{border-color:#1D9E75;background:#E1F5EE;color:#0F6E56}
 .seg-mode-btn.active.bike{border-color:#BA7517;background:#FAEEDA;color:#854F0B}
 .seg-mode-btn.active.car{border-color:#7F77DD;background:#EEEDFE;color:#534AB7}
 .seg-mode-btn.active.transit{border-color:#D85A30;background:#FAECE7;color:#993C1D}
 .seg-result-wrap{grid-area:result;display:block;min-width:0;width:100%}
-.seg-result{display:block;min-width:0;font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:normal;line-height:1.45}
+.seg-result{display:block;min-width:0;font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.45}
+.seg-mode-name{color:var(--muted);font-weight:800;margin-right:4px}
 .seg-result.walk{color:#0F6E56}.seg-result.bike{color:#854F0B}.seg-result.car{color:#534AB7}.seg-result.transit{color:#993C1D}
 .seg-result.muted{color:#aaa;font-weight:400}
 .seg-result.warn{color:#BA7517;font-weight:700}
@@ -874,14 +875,14 @@ body.view-only .empty-day small{display:none}
 .seg-warning{display:inline-flex;align-items:center;margin-left:3px;padding:1px 5px;border-radius:5px;background:#fff9ef;border:1px solid #F0D6A5;color:#BA7517;font-size:10px;font-weight:800;vertical-align:middle}
 .seg-warning.manual{background:#E6F1FB;border-color:#9BC7F2;color:#185FA5}
 .seg-warning-text{display:block;margin-top:2px;color:#BA7517;font-size:10px;font-weight:700;line-height:1.35;white-space:normal}
-.seg-actions{grid-area:actions;display:none;align-items:center;justify-content:flex-end;gap:6px;width:100%;white-space:nowrap;flex-wrap:wrap}
+.seg-actions{grid-area:actions;display:none;align-items:center;justify-content:flex-end;gap:6px;width:100%;white-space:nowrap;flex-wrap:nowrap}
 .seg-connector.tools-open .seg-actions,.seg-connector.seg-expanded .seg-actions{display:flex}
-.seg-tool-btn,.seg-calc-btn{height:26px;padding:0 7px;border:1px solid var(--line);border-radius:7px;background:var(--surface);cursor:pointer;font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:4px}
+.seg-tool-btn,.seg-calc-btn{height:30px;padding:0 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;font-size:11px;font-weight:800;color:var(--muted);white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:4px}
 .seg-tool-btn:hover,.seg-calc-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 .seg-tool-btn.danger:hover{background:#fff5f5;border-color:#fcc;color:var(--danger)}
 .seg-google-route{background:#E8F5E9;border-color:#A5D6A7;color:#2E7D32;text-decoration:none}
 .seg-google-route:hover{background:#C8E6C9;border-color:#66BB6A;color:#1B5E20}
-.seg-manual-editor{grid-area:editor;display:none;gap:7px;padding:7px 8px;border:1px solid var(--line-soft);border-radius:9px;background:#FAFBFA;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-column:1 / -1}
+.seg-manual-editor{grid-area:editor;display:none;gap:7px;padding:8px;border:1px solid var(--line-soft);border-radius:10px;background:#fff;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto auto;grid-column:1 / -1}
 .seg-manual-editor.open{display:grid}
 .seg-google-route{justify-content:center}
 .seg-manual-field{display:flex;align-items:center;gap:5px;min-width:0;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:4px 8px;color:var(--muted);font-size:11px;font-weight:700}
@@ -1208,21 +1209,23 @@ body.mobile-ui #mobile-sheet{position:absolute;left:0;right:0;bottom:0;z-index:1
 #mobile-spot-list .seg-body{padding:3px 0;gap:5px 8px}
 #mobile-spot-list .seg-connector:hover .seg-body{grid-template-areas:"main result";padding:3px 0;background:transparent}
 #mobile-spot-list .seg-connector:hover .seg-actions{display:none}
-#mobile-spot-list .seg-connector:not(.tools-open):not(.seg-expanded) .seg-mode-btn:not(.active){display:none!important}
 #mobile-spot-list .seg-label{display:none}
 #mobile-spot-list .seg-more-btn{display:inline-flex;width:34px;height:34px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--muted);align-items:center;justify-content:center;font-size:18px;flex:0 0 auto}
 #mobile-spot-list .seg-more-btn.active{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 #mobile-spot-list .seg-connector.tools-open .seg-body,
-#mobile-spot-list .seg-connector.seg-expanded .seg-body{grid-template-areas:"main result" "actions actions" "editor editor";padding:8px 10px}
+#mobile-spot-list .seg-connector.seg-expanded .seg-body{grid-template-areas:"main result" "mode mode" "actions actions" "editor editor";padding:8px 10px}
 #mobile-spot-list .seg-connector.tools-open .seg-actions,
 #mobile-spot-list .seg-connector.seg-expanded .seg-actions{display:flex}
-#mobile-spot-list .seg-mode-btns{background:var(--surface-soft);border-radius:10px;padding:4px;gap:2px}
-#mobile-spot-list .seg-mode-btn{width:34px;height:32px;border:none;border-radius:8px;font-size:17px;background:transparent}
+#mobile-spot-list .seg-mode-btns{background:var(--surface-soft);border-radius:10px;padding:4px;gap:2px;display:none}
+#mobile-spot-list .seg-connector.tools-open .seg-mode-btns,
+#mobile-spot-list .seg-connector.seg-expanded .seg-mode-btns{display:flex}
+#mobile-spot-list .seg-mode-btn{height:34px;min-width:0;flex:1;border:none;border-radius:8px;font-size:12px;background:transparent}
 #mobile-spot-list .seg-mode-btn.active{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)}
 #mobile-spot-list .seg-tool-btn,#mobile-spot-list .seg-calc-btn{height:34px;border-radius:10px;font-size:12px;padding:0 10px}
+#mobile-spot-list .seg-actions{justify-content:flex-end;flex-wrap:wrap}
 #mobile-spot-list .seg-result{font-size:14px}
 #mobile-spot-list .seg-result-wrap{min-width:0}
-#mobile-spot-list .seg-manual-editor{gap:8px;padding:9px;align-items:stretch}
+#mobile-spot-list .seg-manual-editor{gap:8px;padding:9px;align-items:stretch;grid-template-columns:1fr 1fr}
 #mobile-spot-list .seg-manual-field{flex:1;min-width:120px;height:40px;font-size:12px}
 #mobile-spot-list .seg-manual-save,#mobile-spot-list .seg-manual-cancel{height:40px;font-size:13px}
 .mobile-sheet-actions{position:absolute;left:0;right:0;bottom:0;padding:10px 16px calc(env(safe-area-inset-bottom) + 14px);background:linear-gradient(180deg,rgba(255,255,255,.88),#fff 30%);border-top:1px solid var(--line-soft);display:flex;align-items:center;gap:10px;z-index:4}
@@ -1764,7 +1767,7 @@ const params=new URLSearchParams(location.search);
 const CLOUD_CONFIG_KEY='tp_cloud_config';
 const GAS_SYNC_KEY='tp_gas_sync_config';
 const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/supabase/';
-const APP_VERSION='20260719-shared-password';
+const APP_VERSION='20260719-compact-segments';
 const SUPABASE_BOUND_APP=true;
 const SUPABASE_CONFIG={
   url:'https://pxoovfsvvmfxwibjtsvv.supabase.co',
@@ -4301,19 +4304,18 @@ function renderSegmentConnector(spot,i){
   const expanded=expandedSegmentIds.has(spot.id);
   const toolsOpen=activeSegmentToolsId===spot.id;
   conn.className=`seg-connector${expanded?' seg-expanded':''}${toolsOpen?' tools-open':''}`;
-  const mbHtml=MODES.map(m=>`<button class="seg-mode-btn${seg.mode===m.id?' active '+m.cls:''}" data-mode="${m.id}" title="${m.label}"><i class="ti ${m.icon}"></i></button>`).join('');
+  const mbHtml=MODES.map(m=>`<button class="seg-mode-btn${seg.mode===m.id?' active '+m.cls:''}" data-mode="${m.id}" title="${m.label}"><i class="ti ${m.icon}"></i><span>${m.label}</span></button>`).join('');
   conn.innerHTML=`
     <div class="seg-timeline"><div class="seg-vline"></div></div>
     <div class="seg-body">
       <div class="seg-main">
-        <div class="seg-label">&gt;&gt;</div>
         <button class="seg-more-btn${toolsOpen||expanded?' active':''}" type="button" title="${toolsOpen||expanded?'收合交通操作':'交通操作'}" aria-label="${toolsOpen||expanded?'收合交通操作':'交通操作'}"><i class="ti ti-dots"></i></button>
-        <div class="seg-mode-btns">${mbHtml}</div>
       </div>
       <div class="seg-result-wrap">${segmentResultHtml(seg,mode)}</div>
+      <div class="seg-mode-btns">${mbHtml}</div>
       <div class="seg-actions">
         <a class="seg-tool-btn seg-google-route" href="${googleRouteUrl}" target="_blank" rel="noopener"><i class="ti ti-brand-google-maps"></i> Google 路線</a>
-        <button class="seg-tool-btn seg-manual-toggle" type="button"><i class="ti ti-pencil"></i> ${expanded?'收合':'手動'}</button>
+        <button class="seg-tool-btn seg-manual-toggle" type="button"><i class="ti ti-pencil"></i> ${expanded?'收合手動':'手動修正'}</button>
         ${hasManualSegment(seg)?'<button class="seg-tool-btn danger seg-manual-clear" type="button"><i class="ti ti-x"></i> 清除</button>':''}
         <button class="seg-calc-btn" type="button"><i class="ti ti-route"></i> 計算</button>
       </div>
@@ -4355,12 +4357,14 @@ function renderSegmentConnector(spot,i){
   conn.querySelector('.seg-calc-btn').onclick=()=>calcSegment(i);
   conn.querySelector('.seg-manual-toggle').onclick=()=>{
     if(!requireEdit('手動調整路段'))return;
+    activeSegmentToolsId=spot.id;
     if(expandedSegmentIds.has(spot.id))expandedSegmentIds.delete(spot.id);
     else expandedSegmentIds.add(spot.id);
     renderSidebar();
   };
   conn.querySelector('.seg-manual-cancel').onclick=()=>{
     expandedSegmentIds.delete(spot.id);
+    activeSegmentToolsId=spot.id;
     renderSidebar();
   };
   conn.querySelector('.seg-manual-clear')?.addEventListener('click',()=>{
@@ -4368,6 +4372,7 @@ function renderSegmentConnector(spot,i){
     delete spot.seg.manualDurationMin;
     delete spot.seg.manualDistanceKm;
     expandedSegmentIds.delete(spot.id);
+    activeSegmentToolsId=spot.id;
     recomputeTimeline(activeDay);
     renderSidebar();
     saveLocal();
@@ -4381,6 +4386,7 @@ function renderSegmentConnector(spot,i){
     if(distance===null)delete spot.seg.manualDistanceKm;
     else spot.seg.manualDistanceKm=Number(distance.toFixed(1));
     expandedSegmentIds.delete(spot.id);
+    activeSegmentToolsId=spot.id;
     recomputeTimeline(activeDay);
     renderSidebar();
     saveLocal();
@@ -4840,17 +4846,18 @@ function segmentDistanceText(seg){
   return m===null?'':fmtDist(m);
 }
 function segmentResultHtml(seg,mode){
+  const modeName=`<span class="seg-mode-name"><i class="ti ${mode.icon}"></i> ${mode.label}</span>`;
   const manual=hasManualSegment(seg);
   const manualDistance=segmentDistanceText(seg);
   if(manual){
     const auto=seg.result&&!seg.result.loading&&!seg.result.error&&seg.result.durationSec
       ?`<span class="seg-warning-text">自動參考：${seg.result.duration} · ${seg.result.distance}${seg.result.warning?'（估算）':''}</span>`:'';
-    return `<span class="seg-result manual">${segmentDurationText(seg)}${manualDistance?` · ${manualDistance}`:''} <span class="seg-warning manual">手動</span>${auto}</span>`;
+    return `<span class="seg-result manual">${modeName}${segmentDurationText(seg)}${manualDistance?` · ${manualDistance}`:''} <span class="seg-warning manual">手動</span>${auto}</span>`;
   }
-  if(!seg.result)return '<span class="seg-result muted">—</span>';
-  if(seg.result.loading)return `<span class="seg-result muted"><i class="ti ti-loader-2"></i> 計算中</span>`;
-  if(seg.result.error)return `<span class="seg-result muted" style="color:#e07" title="${esc(seg.result.message||'路線計算失敗')}">${seg.result.message||'錯誤'}</span>`;
-  return `<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${esc(seg.result.warning||'')}">${seg.result.duration} · ${seg.result.distance} ${formatRouteWarning(seg.result.warning)}${seg.result.warning?`<span class="seg-warning-text">已改用估算：${seg.result.warning}</span>`:''}</span>`;
+  if(!seg.result)return `<span class="seg-result muted">${modeName}未計算</span>`;
+  if(seg.result.loading)return `<span class="seg-result muted">${modeName}<i class="ti ti-loader-2"></i> 計算中</span>`;
+  if(seg.result.error)return `<span class="seg-result muted" style="color:#e07" title="${esc(seg.result.message||'路線計算失敗')}">${modeName}${seg.result.message||'錯誤'}</span>`;
+  return `<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${esc(seg.result.warning||'')}">${modeName}${seg.result.duration} · ${seg.result.distance} ${formatRouteWarning(seg.result.warning)}${seg.result.warning?`<span class="seg-warning-text">已改用估算：${seg.result.warning}</span>`:''}</span>`;
 }
 function googleRoutePlaceParam(spot){
   const text=[spot?.name,spot?.addr].filter(Boolean).join(' ').trim();
