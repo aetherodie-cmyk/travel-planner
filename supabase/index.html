@@ -1278,7 +1278,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
         <span><i class="ti ti-cloud"></i> 目前 Supabase 共編行程</span>
         <button class="trip-action-btn secondary" id="gas-list-btn" style="display:none"><i class="ti ti-refresh"></i> 重新整理清單</button>
       </div>
-      <div class="trip-help"><b>Supabase 共編：</b>分享同一個旅程 ID 的連結，大家就會看到同一份雲端資料。第一版先以整份旅程同步，下一階段再拆成多張資料表。</div>
+      <div class="trip-help"><b>Supabase 共編：</b>分享同一個旅程 ID 的連結，大家就會看到同一份雲端資料。目前會拆成日期、景點、交通段與紀錄表同步；舊 JSON 只作為匯入備援。</div>
       <div class="trip-url-box cloud-share-box">
         <div class="trip-url-title">目前旅程分享連結</div>
         <div class="trip-url-row">
@@ -1305,7 +1305,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
       <div class="trip-help"><b>單機版：</b>只存在這台電腦 / 手機的瀏覽器，不會自動上傳，也不會讓別人看到。適合給旅伴測試或用 JSON 檔交換意見。</div>
       <div class="trip-list" id="trip-list"></div>
       <div class="trip-section-title"><i class="ti ti-database"></i> Supabase 即時共編資料庫</div>
-      <div class="trip-help"><b>新版共編：</b>Supabase 會成為多人共編的雲端正本。旅伴使用同一個行程連結即可看到更新；編輯版會直接寫入資料庫。</div>
+      <div class="trip-help"><b>新版共編：</b>Supabase 會成為多人共編的雲端正本。旅伴使用同一個行程連結即可看到更新；編輯版會直接寫入資料庫的多張資料表。</div>
       <div class="trip-form-field">
         <label>Supabase 設定 JSON</label>
         <textarea id="cloud-config-input" placeholder='{ "url": "https://xxxx.supabase.co", "anonKey": "..." }'></textarea>
@@ -1657,6 +1657,7 @@ const SUPABASE_CONFIG={
   url:'https://pxoovfsvvmfxwibjtsvv.supabase.co',
   anonKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4b292ZnN2dm1meHdpYmp0c3Z2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ0MzI0NzksImV4cCI6MjEwMDAwODQ3OX0.ZgEQCr9ni7c2xJQHuJh8LytL9gXf0LM2pDpYjfCJ-zU'
 };
+const SUPABASE_SCHEMA_VERSION='split-trip-v1';
 function sanitizeTripId(value){
   return String(value||'local-default').trim().replace(/[^\w-]/g,'-').slice(0,48)||'local-default';
 }
@@ -1728,7 +1729,19 @@ function recordActivity(action,detail={}){
   });
   activityLog=activityLog.slice(0,100);
 }
+function makeStableId(prefix='id'){
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+}
+function ensureTripStructureIds(){
+  days.forEach((day,di)=>{
+    if(!day.id)day.id=makeStableId(`day${di+1}`);
+    (day.spots||[]).forEach((spot,si)=>{
+      if(!spot.id)spot.id=makeStableId(`spot${di+1}_${si+1}`);
+    });
+  });
+}
 function makeTripState(){
+  ensureTripStructureIds();
   return {
     id:currentTripId,
     title:currentTripTitle,
@@ -2806,6 +2819,196 @@ function setCloudStatus(text,type=''){
   el.textContent=text;
   el.className=`cloud-status ${type}`.trim();
 }
+function cloneWithoutKeys(obj,keys=[]){
+  const out={...(obj||{})};
+  keys.forEach(k=>delete out[k]);
+  return out;
+}
+function cloudRowsFromState(state){
+  const d=state.data||{};
+  const sourceDays=Array.isArray(d.days)?d.days:[];
+  const dayRows=[];
+  const placeRows=[];
+  const segmentRows=[];
+  const logRows=[];
+  sourceDays.forEach((day,di)=>{
+    const dayId=day.id||makeStableId(`day${di+1}`);
+    day.id=dayId;
+    dayRows.push({
+      id:dayId,
+      trip_id:state.id,
+      day_index:di,
+      name:day.name||`第 ${di+1} 天`,
+      date_label:day.dateLabel||null,
+      meta:cloneWithoutKeys(day,['spots'])
+    });
+    (day.spots||[]).forEach((spot,si)=>{
+      if(!spot.id)spot.id=makeStableId(`spot${di+1}_${si+1}`);
+      placeRows.push({
+        id:spot.id,
+        trip_id:state.id,
+        day_id:dayId,
+        place_order:si,
+        name:spot.name||'未命名景點',
+        addr:spot.addr||'',
+        lat:Number.isFinite(parseFloat(spot.lat))?parseFloat(spot.lat):null,
+        lng:Number.isFinite(parseFloat(spot.lng))?parseFloat(spot.lng):null,
+        category:normalizeSpotCategory(spot.category),
+        notes:spot.notes||{},
+        arrival_time:spot.arrivalTime||null,
+        leave_time:spot.leaveTime||null,
+        stay_minutes:spot.stayMinutes===''||spot.stayMinutes===undefined||spot.stayMinutes===null?null:parseInt(spot.stayMinutes,10),
+        time_auto_arrival:!!spot.timeAutoArrival,
+        time_auto_leave:!!spot.timeAutoLeave,
+        osm_type:spot.osmType||null,
+        osm_id:spot.osmId===undefined||spot.osmId===null?null:String(spot.osmId),
+        meta:cloneWithoutKeys(spot,['seg'])
+      });
+      if(si<day.spots.length-1){
+        const next=day.spots[si+1];
+        if(!next.id)next.id=makeStableId(`spot${di+1}_${si+2}`);
+        const seg=spot.seg||{mode:'foot-walking',result:null};
+        segmentRows.push({
+          id:`${state.id}_${spot.id}_${next.id}`,
+          trip_id:state.id,
+          day_id:dayId,
+          segment_order:si,
+          from_place_id:spot.id,
+          to_place_id:next.id,
+          mode:seg.mode||'foot-walking',
+          manual_duration_min:cleanPositiveNumber(seg.manualDurationMin),
+          manual_distance_km:cleanPositiveNumber(seg.manualDistanceKm),
+          result:seg.result||null,
+          meta:seg
+        });
+      }
+    });
+  });
+  (state.activityLog||[]).slice(0,100).forEach(log=>{
+    logRows.push({
+      id:log.id||makeStableId('log'),
+      trip_id:state.id,
+      occurred_at:log.time||new Date().toISOString(),
+      actor:log.actor||state.updatedBy||'anonymous',
+      action:log.action||'update',
+      detail:log.detail||{}
+    });
+  });
+  return{dayRows,placeRows,segmentRows,logRows};
+}
+async function deleteCloudChildRows(tripId){
+  for(const table of ['route_segments','places','days','trip_logs']){
+    const {error}=await cloudDb.from(table).delete().eq('trip_id',tripId);
+    if(error)throw error;
+  }
+}
+async function insertCloudRows(rows){
+  if(rows.dayRows.length){
+    const {error}=await cloudDb.from('days').insert(rows.dayRows);
+    if(error)throw error;
+  }
+  if(rows.placeRows.length){
+    const {error}=await cloudDb.from('places').insert(rows.placeRows);
+    if(error)throw error;
+  }
+  if(rows.segmentRows.length){
+    const {error}=await cloudDb.from('route_segments').insert(rows.segmentRows);
+    if(error)throw error;
+  }
+  if(rows.logRows.length){
+    const {error}=await cloudDb.from('trip_logs').upsert(rows.logRows,{onConflict:'id'});
+    if(error)throw error;
+  }
+}
+function stateFromCloudRows(trip,dayRows=[],placeRows=[],segmentRows=[],logRows=[]){
+  const byDay=new Map();
+  const nextSegByFrom=new Map();
+  segmentRows.forEach(row=>nextSegByFrom.set(row.from_place_id,row));
+  dayRows
+    .slice()
+    .sort((a,b)=>(a.day_index??0)-(b.day_index??0))
+    .forEach(row=>{
+      byDay.set(row.id,{
+        ...(row.meta||{}),
+        id:row.id,
+        name:row.name||'未命名日期',
+        dateLabel:row.date_label||row.meta?.dateLabel,
+        spots:[]
+      });
+    });
+  placeRows
+    .slice()
+    .sort((a,b)=>(a.place_order??0)-(b.place_order??0))
+    .forEach(row=>{
+      const day=byDay.get(row.day_id);
+      if(!day)return;
+      const meta=row.meta||{};
+      const spot={
+        ...meta,
+        id:row.id,
+        name:row.name||meta.name||'未命名景點',
+        addr:row.addr||meta.addr||'',
+        lat:row.lat??meta.lat,
+        lng:row.lng??meta.lng,
+        category:normalizeSpotCategory(row.category||meta.category),
+        notes:row.notes||meta.notes||{},
+        arrivalTime:row.arrival_time||meta.arrivalTime||'',
+        leaveTime:row.leave_time||meta.leaveTime||'',
+        stayMinutes:row.stay_minutes??meta.stayMinutes??'',
+        timeAutoArrival:!!row.time_auto_arrival,
+        timeAutoLeave:!!row.time_auto_leave,
+        osmType:row.osm_type||meta.osmType,
+        osmId:row.osm_id||meta.osmId
+      };
+      const segRow=nextSegByFrom.get(row.id);
+      if(segRow){
+        spot.seg={
+          ...(segRow.meta||{}),
+          mode:segRow.mode||segRow.meta?.mode||'foot-walking',
+          result:segRow.result||segRow.meta?.result||null
+        };
+        if(segRow.manual_duration_min!==null&&segRow.manual_duration_min!==undefined)spot.seg.manualDurationMin=segRow.manual_duration_min;
+        if(segRow.manual_distance_km!==null&&segRow.manual_distance_km!==undefined)spot.seg.manualDistanceKm=segRow.manual_distance_km;
+      }
+      day.spots.push(spot);
+    });
+  return{
+    id:trip.id,
+    title:trip.title||'旅遊行程規劃',
+    updatedAt:trip.updated_at,
+    updatedBy:trip.updated_by,
+    schema:trip.schema||SUPABASE_SCHEMA_VERSION,
+    data:{
+      days:[...byDay.values()],
+      activeDay:trip.active_day||0,
+      orsApiKey:trip.ors_api_key||'',
+      useApiKey:!!trip.use_api_key
+    },
+    activityLog:logRows
+      .slice()
+      .sort((a,b)=>String(b.occurred_at||'').localeCompare(String(a.occurred_at||'')))
+      .map(row=>({id:row.id,time:row.occurred_at,actor:row.actor,action:row.action,detail:row.detail||{}}))
+  };
+}
+async function fetchCloudTripState(){
+  const {data:trip,error:tripError}=await cloudDb.from('trips').select('*').eq('id',currentTripId).maybeSingle();
+  if(tripError)throw tripError;
+  if(!trip)return null;
+  const {data:dayRows,error:dayError}=await cloudDb.from('days').select('*').eq('trip_id',currentTripId).order('day_index');
+  if(dayError)throw dayError;
+  if(dayRows?.length){
+    const [placesRes,segsRes,logsRes]=await Promise.all([
+      cloudDb.from('places').select('*').eq('trip_id',currentTripId).order('place_order'),
+      cloudDb.from('route_segments').select('*').eq('trip_id',currentTripId).order('segment_order'),
+      cloudDb.from('trip_logs').select('*').eq('trip_id',currentTripId).order('occurred_at',{ascending:false}).limit(100)
+    ]);
+    if(placesRes.error)throw placesRes.error;
+    if(segsRes.error)throw segsRes.error;
+    if(logsRes.error)throw logsRes.error;
+    return stateFromCloudRows(trip,dayRows,placesRes.data||[],segsRes.data||[],logsRes.data||[]);
+  }
+  return trip.payload?.data?.days?trip.payload:null;
+}
 function updateCloudStatus(){
   if(!cloudEnabled){
     setCloudStatus('尚未啟用 Supabase。設定後，這個行程會成為多人可查看與編輯的雲端正本。');
@@ -2833,24 +3036,28 @@ async function initCloudSync(){
     cloudApi=sbMod;
     cloudDb=sbMod.createClient(cloudConfig.url,cloudConfig.anonKey);
     cloudDocRef=currentTripId;
-    const {data,error}=await cloudDb.from('trips').select('payload').eq('id',currentTripId).maybeSingle();
-    if(error)throw error;
-    if(data?.payload?.data?.days){
+    const remoteState=await fetchCloudTripState();
+    if(remoteState?.data?.days){
       cloudApplying=true;
-      applyTripState(data.payload,{persist:true,render:true});
+      applyTripState(remoteState,{persist:true,render:true});
       cloudApplying=false;
     }else if(canEdit()){
       await pushCloudState();
     }
     const channel=cloudDb
       .channel(`trip:${currentTripId}`)
-      .on('postgres_changes',{event:'*',schema:'public',table:'trips',filter:`id=eq.${currentTripId}`},payload=>{
-        const row=payload.new;
-        if(!row?.payload?.data?.days)return;
-        cloudApplying=true;
-        applyTripState(row.payload,{persist:true,render:true});
-        cloudApplying=false;
-        setCloudStatus(`Supabase 已收到更新：trips/${currentTripId}`,'ok');
+      .on('postgres_changes',{event:'*',schema:'public',table:'trips',filter:`id=eq.${currentTripId}`},async()=>{
+        try{
+          const updated=await fetchCloudTripState();
+          if(!updated?.data?.days)return;
+          cloudApplying=true;
+          applyTripState(updated,{persist:true,render:true});
+          cloudApplying=false;
+          setCloudStatus(`Supabase 已收到更新：trips/${currentTripId}`,'ok');
+        }catch(e){
+          cloudApplying=false;
+          setCloudStatus(`Supabase 讀取更新失敗：${e.message}`,'err');
+        }
       })
       .subscribe(status=>{
         if(status==='SUBSCRIBED')setCloudStatus(`Supabase 已連線：trips/${currentTripId}`,'ok');
@@ -2871,22 +3078,36 @@ function scheduleCloudSave(){
 async function pushCloudState(){
   if(!cloudEnabled||!cloudDocRef||!cloudApi||!canEdit())return;
   try{
-    setCloudStatus('正在寫入 Supabase…','sync');
+    setCloudStatus('正在寫入 Supabase 多表資料…','sync');
     const state=makeTripState();
     state.updatedBy=gasSyncConfig.actor||localStorage.getItem('tp_actor_name')||'anonymous';
     state.storage='supabase-postgres';
-    state.schema='whole-trip-v1';
+    state.schema=SUPABASE_SCHEMA_VERSION;
+    const rows=cloudRowsFromState(state);
     const row={
       id:currentTripId,
       title:state.title||currentTripId,
-      payload:state,
+      payload:{schema:SUPABASE_SCHEMA_VERSION,migratedAt:state.updatedAt},
+      active_day:state.data?.activeDay||0,
+      ors_api_key:state.data?.orsApiKey||'',
+      use_api_key:!!state.data?.useApiKey,
       updated_at:state.updatedAt,
       updated_by:state.updatedBy,
       schema:state.schema
     };
     const {error}=await cloudDb.from('trips').upsert(row,{onConflict:'id'});
     if(error)throw error;
-    setCloudStatus(`Supabase 已同步：trips/${currentTripId}`,'ok');
+    await deleteCloudChildRows(currentTripId);
+    await insertCloudRows(rows);
+    const finalUpdatedAt=new Date().toISOString();
+    const {error:touchError}=await cloudDb.from('trips').update({
+      updated_at:finalUpdatedAt,
+      updated_by:state.updatedBy,
+      schema:SUPABASE_SCHEMA_VERSION,
+      payload:{schema:SUPABASE_SCHEMA_VERSION,migratedAt:finalUpdatedAt}
+    }).eq('id',currentTripId);
+    if(touchError)throw touchError;
+    setCloudStatus(`Supabase 已同步多表資料：trips/${currentTripId}`,'ok');
   }catch(e){
     setCloudStatus(`Supabase 寫入失敗：${e.message}`,'err');
   }
