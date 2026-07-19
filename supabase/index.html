@@ -894,6 +894,7 @@ body.view-only .empty-day small{display:none}
 #map-controls{position:absolute;top:10px;right:10px;z-index:999;display:flex;flex-direction:column;gap:5px}
 .map-ctrl-btn{width:32px;height:32px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;color:#555;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .map-ctrl-btn:hover{background:#f5f5f5}
+.map-ctrl-btn.active{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 /* route summary */
 #route-info{position:absolute;bottom:10px;left:10px;right:50px;z-index:999;background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:10px 13px;font-size:12px;display:none;box-shadow:0 2px 8px rgba(0,0,0,.1);max-height:200px;overflow-y:auto}
 #route-info .ri-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -1597,6 +1598,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
   <div id="map-panel">
     <div id="map"></div>
     <div id="map-controls">
+      <button class="map-ctrl-btn active" id="map-day-scope-btn" title="地圖：只顯示目前這一天"><i class="ti ti-calendar"></i></button>
       <button class="map-ctrl-btn" id="fit-btn" title="顯示全部景點"><i class="ti ti-maximize"></i></button>
       <button class="map-ctrl-btn" id="show-routes-btn" title="在地圖顯示所有路線"><i class="ti ti-map-route"></i></button>
       <div style="position:relative">
@@ -1623,6 +1625,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
       <div id="mobile-actions-menu">
         <div class="mobile-menu-item primary" id="mobile-access-mode"><i class="ti ti-lock"></i> <span id="mobile-access-mode-label">開始編輯</span></div>
         <div class="mobile-menu-item" id="mobile-ui-mode-btn"><i class="ti ti-devices"></i> <span id="mobile-ui-mode-label">版面：自動</span></div>
+        <div class="mobile-menu-item" id="mobile-map-scope-btn"><i class="ti ti-calendar"></i> <span id="mobile-map-scope-label">地圖：當天</span></div>
         <div class="mobile-menu-item" id="mobile-trips"><i class="ti ti-folders"></i> 旅程管理</div>
         <div class="mobile-menu-item" id="mobile-load-json"><i class="ti ti-folder-open"></i> 載入行程 JSON</div>
         <div class="mobile-menu-item" id="mobile-export-json"><i class="ti ti-file-download"></i> 匯出行程 JSON</div>
@@ -1697,6 +1700,7 @@ let searchTimeout=null;
 let orsApiKey='';
 let useApiKey=false;
 let uiMode=localStorage.getItem('tp_ui_mode')||'auto';
+let mapDayScope=localStorage.getItem('tp_map_day_scope')||'active';
 let mobileSheetState='half';
 let expandedTimelineIds=new Set();
 let expandedSegmentIds=new Set();
@@ -2012,7 +2016,7 @@ async function toggleAccessMode(){
 }
 function fitBoundsSilently(){
   if(!map)return;
-  const all=[];days.forEach(d=>d.spots.forEach(s=>all.push([s.lat,s.lng])));
+  const all=visibleMapSpots();
   if(all.length)map.fitBounds(L.latLngBounds(all),{padding:[40,40]});
 }
 
@@ -3593,10 +3597,45 @@ function clearRouteLayers(){
   routeLayers=[];
   document.getElementById('route-info').style.display='none';
 }
+function visibleMapDayIndexes(){
+  if(mapDayScope==='all')return days.map((_,i)=>i);
+  return days[activeDay]?[activeDay]:[];
+}
+function visibleMapSpots(){
+  const spots=[];
+  visibleMapDayIndexes().forEach(di=>{
+    days[di]?.spots?.forEach(s=>spots.push([s.lat,s.lng]));
+  });
+  return spots;
+}
+function updateMapScopeUI(){
+  const isActive=mapDayScope!=='all';
+  const desktopBtn=document.getElementById('map-day-scope-btn');
+  if(desktopBtn){
+    desktopBtn.classList.toggle('active',isActive);
+    desktopBtn.title=isActive?'地圖：只顯示目前這一天':'地圖：顯示全部天數';
+    desktopBtn.innerHTML=isActive?'<i class="ti ti-calendar"></i>':'<i class="ti ti-calendar-stats"></i>';
+  }
+  const mobileLabel=document.getElementById('mobile-map-scope-label');
+  if(mobileLabel)mobileLabel.textContent=isActive?'地圖：當天':'地圖：全部';
+}
+function setMapDayScope(scope){
+  mapDayScope=scope==='all'?'all':'active';
+  localStorage.setItem('tp_map_day_scope',mapDayScope);
+  renderMarkers();
+  clearRouteLayers();
+  updateMapScopeUI();
+}
+function toggleMapDayScope(){
+  setMapDayScope(mapDayScope==='all'?'active':'all');
+  showToast(mapDayScope==='all'?'地圖已顯示全部天數':'地圖已切回目前這一天');
+}
 function renderMarkers(){
   Object.values(markers).forEach(m=>map.removeLayer(m));
   markers={};
-  days.forEach((day,di)=>{
+  visibleMapDayIndexes().forEach(di=>{
+    const day=days[di];
+    if(!day)return;
     const c=DAY_COLORS[di%DAY_COLORS.length];
     const fill=DAY_FILL[di%DAY_FILL.length];
     day.spots.forEach((spot,si)=>{
@@ -3612,6 +3651,7 @@ function renderMarkers(){
       markers[spot.id]=m;
     });
   });
+  updateMapScopeUI();
   updateTotals();saveLocal();
 }
 
@@ -3636,7 +3676,7 @@ function renderTabs(){
     t.dataset.tabIdx=i;
     t.innerHTML=`<span>${d.name}</span><span class="day-tab-del" title="刪除此天" data-delidx="${i}">×</span>`;
     t.querySelector('span:first-child').ondblclick=()=>{if(canEdit())renameDay(i);};
-    t.onclick=e=>{if(e.target.classList.contains('day-tab-del'))return;activeDay=i;renderSidebar();clearRouteLayers();};
+    t.onclick=e=>{if(e.target.classList.contains('day-tab-del'))return;activeDay=i;renderSidebar();renderMarkers();clearRouteLayers();};
     // tab drag-to-reorder
     if(canEdit()){
       t.addEventListener('dragstart',e=>{tabDragSrc=i;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','tab');});
@@ -3690,7 +3730,7 @@ function renderMobileTabs(){
     t.className='day-tab'+(i===activeDay?' active':'');
     t.innerHTML=`<span>${d.name}</span><span class="day-tab-del" title="刪除此天" data-delidx="${i}">×</span>`;
     t.querySelector('span:first-child').ondblclick=()=>{if(canEdit())renameDay(i);};
-    t.onclick=e=>{if(e.target.classList.contains('day-tab-del'))return;activeDay=i;renderSidebar();clearRouteLayers();};
+    t.onclick=e=>{if(e.target.classList.contains('day-tab-del'))return;activeDay=i;renderSidebar();renderMarkers();clearRouteLayers();};
     if(canEdit())t.querySelector('.day-tab-del').onclick=e=>{e.stopPropagation();deleteDay(i);};
     el.appendChild(t);
   });
@@ -5141,7 +5181,7 @@ function formatHours(raw){
 
 /* ═══════════════ MAP CONTROLS ═══════════════ */
 function fitBounds(){
-  const all=[];days.forEach(d=>d.spots.forEach(s=>all.push([s.lat,s.lng])));
+  const all=visibleMapSpots();
   if(all.length)map.fitBounds(L.latLngBounds(all),{padding:[40,40]});
   else alert('尚未加入任何景點');
 }
@@ -5245,7 +5285,7 @@ function applyLoadedData(payload, sourceName){
   renderMarkers();
   clearRouteLayers();
   const allSpots=days.flatMap(d=>d.spots);
-  if(allSpots.length)map.fitBounds(L.latLngBounds(allSpots.map(s=>[s.lat,s.lng])),{padding:[40,40]});
+  fitBoundsSilently();
   // toast
   showToast(`已載入「${sourceName}」— ${days.length} 天、${allSpots.length} 個景點`);
 }
@@ -5581,9 +5621,11 @@ document.addEventListener('click',e=>{
   }
 });
 // map
+document.getElementById('map-day-scope-btn').onclick=toggleMapDayScope;
 document.getElementById('fit-btn').onclick=fitBounds;
 document.getElementById('show-routes-btn').onclick=showAllRoutes;
 document.getElementById('calc-all-btn').onclick=calcAllSegments;
+document.getElementById('mobile-map-scope-btn').onclick=toggleMapDayScope;
 document.getElementById('mobile-fit-btn').onclick=fitBounds;
 document.getElementById('mobile-recenter-btn').onclick=fitBounds;
 document.getElementById('mobile-routes-btn').onclick=showAllRoutes;
@@ -5814,7 +5856,7 @@ if(!days.some(d=>d.spots.length)&&!hasTripIdParam&&!gasAutoLoadRemote){
 }
 renderSidebar();renderMarkers();
 const allSpots=days.flatMap(d=>d.spots);
-if(allSpots.length)map.fitBounds(L.latLngBounds(allSpots.map(s=>[s.lat,s.lng])),{padding:[40,40]});
+if(allSpots.length)fitBoundsSilently();
 applyUiMode();
 if(gasSyncEnabled){
   updateGasStatus();
