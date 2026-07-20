@@ -1,0 +1,4 @@
+project_id = "pxoovfsvvmfxwibjtsvv"
+
+[functions.google-route]
+verify_jwt = true

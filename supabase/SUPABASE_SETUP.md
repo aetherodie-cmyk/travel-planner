@@ -185,3 +185,17 @@ end $$;
 - owner：可管理旅程與成員
 - editor：可修改行程
 - viewer：只能查看
+
+## 7. Google Maps 點到點時間
+
+新版前端會優先呼叫 Supabase Edge Function `google-route`，取得 Google Maps 計算的時間與距離；若尚未部署或呼叫失敗，會自動沿用原本 ORS / OSRM 估算。
+
+部署前請先在 Google Cloud 啟用 **Routes API**，並建立只允許 Routes API 的 API Key。Key 不可放進 `index.html`，請存成 Supabase secret：
+
+```bash
+npx supabase login
+npx supabase secrets set GOOGLE_MAPS_API_KEY=你的金鑰 --project-ref pxoovfsvvmfxwibjtsvv
+npx supabase functions deploy google-route --project-ref pxoovfsvvmfxwibjtsvv
+```
+
+部署完成後不需要在旅程規劃網頁另外輸入 Google Key。每一天請設定實際日期與目的地時區，開車與大眾運輸才會使用正確的預計出發時間。

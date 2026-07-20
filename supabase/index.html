@@ -754,6 +754,12 @@ body.view-only .empty-day small{display:none}
 /* day tabs — draggable */
 #day-tabs-wrap{border-bottom:1px solid var(--line);flex-shrink:0}
 #day-tabs{display:flex;gap:3px;padding:7px 10px 0;overflow-x:auto;align-items:flex-end}
+.day-date-bar{display:flex;align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid var(--line);background:#FAFBFA;color:var(--muted);font-size:11px;flex-shrink:0}
+.day-date-bar i{font-size:15px;color:var(--primary-strong)}
+.day-date-bar input,.day-date-bar select{height:30px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text);font:inherit;padding:0 7px;min-width:0}
+.day-date-bar input{flex:1}
+.day-date-bar select{width:104px}
+.day-date-hint{white-space:nowrap}
 .day-tab{padding:5px 10px;border:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;cursor:grab;font-size:12px;font-weight:700;color:var(--muted);background:var(--surface-soft);white-space:nowrap;flex-shrink:0;user-select:none;display:flex;align-items:center;gap:4px;position:relative}
 .day-tab:hover .day-tab-del{opacity:1}
 .day-tab-del{opacity:0;font-size:12px;color:#bbb;cursor:pointer;line-height:1;padding:0 1px;transition:opacity .15s}
@@ -882,6 +888,7 @@ body.view-only .empty-day small{display:none}
 .seg-tool-btn.danger:hover{background:#fff5f5;border-color:#fcc;color:var(--danger)}
 .seg-google-route{background:#E8F5E9;border-color:#A5D6A7;color:#2E7D32;text-decoration:none}
 .seg-google-route:hover{background:#C8E6C9;border-color:#66BB6A;color:#1B5E20}
+.seg-source{display:inline-flex;align-items:center;margin-left:3px;padding:1px 5px;border-radius:999px;background:#E8F5E9;color:#2E7D32!important;font-size:9px;font-weight:800;text-decoration:none;white-space:nowrap}
 .seg-manual-editor{grid-area:editor;display:none;gap:7px;padding:8px;border:1px solid var(--line-soft);border-radius:10px;background:#fff;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto auto;grid-column:1 / -1}
 .seg-manual-editor.open{display:grid}
 .seg-google-route{justify-content:center}
@@ -1169,6 +1176,8 @@ body.mobile-ui #mobile-sheet{position:absolute;left:0;right:0;bottom:0;z-index:1
 .mobile-sheet-handle::before{content:'';width:40px;height:4px;border-radius:2px;background:#D8DADC}
 .mobile-sheet-head{display:flex;align-items:center;justify-content:center;gap:8px;padding:0 16px 8px;color:var(--muted);font-size:12px;font-weight:600;flex-shrink:0}
 #mobile-day-tabs{display:flex;gap:8px;overflow-x:auto;padding:0 16px 12px;flex-shrink:0}
+#mobile-day-date-bar{margin-top:-5px;padding:0 16px 10px;border-bottom:0;background:#fff;font-size:12px}
+#mobile-day-date-bar input,#mobile-day-date-bar select{height:36px;font-size:13px}
 #mobile-day-tabs .day-tab{height:44px;padding:0 16px;border:1px solid transparent;border-radius:10px;background:var(--surface-soft);color:#44474E;font-size:15px;font-weight:700;align-items:center;cursor:pointer}
 #mobile-day-tabs .day-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 #mobile-day-tabs .day-tab.add-day{border:1px dashed #D8DADC;background:#fff;color:var(--muted);min-width:44px;justify-content:center}
@@ -1233,7 +1242,7 @@ body.mobile-ui #mobile-sheet{position:absolute;left:0;right:0;bottom:0;z-index:1
 .mobile-secondary-btn,.mobile-primary-btn{height:44px;border-radius:12px;font-size:15px;font-weight:750;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 14px;white-space:nowrap}
 .mobile-secondary-btn{border:1px solid #D8DADC;background:#fff;color:#44474E}
 .mobile-primary-btn{border:none;background:var(--primary);color:#fff}
-body.mobile-ui #mobile-sheet[data-state="peek"] .mobile-search-wrap,body.mobile-ui #mobile-sheet[data-state="peek"] #mobile-spot-list,body.mobile-ui #mobile-sheet[data-state="peek"] .mobile-sheet-actions{display:none}
+body.mobile-ui #mobile-sheet[data-state="peek"] #mobile-day-date-bar,body.mobile-ui #mobile-sheet[data-state="peek"] .mobile-search-wrap,body.mobile-ui #mobile-sheet[data-state="peek"] #mobile-spot-list,body.mobile-ui #mobile-sheet[data-state="peek"] .mobile-sheet-actions{display:none}
 body.mobile-ui #mobile-sheet[data-state="full"]{max-height:calc(100dvh - env(safe-area-inset-top) - 88px)}
 body.mobile-ui #route-info{left:14px;right:74px;bottom:calc(var(--mobile-sheet-height,480px) + 14px);max-height:150px}
 body.mobile-ui #toast{bottom:calc(env(safe-area-inset-bottom) + 22px)}
@@ -1640,6 +1649,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
       <div id="search-results"></div>
     </div>
     <div id="day-tabs-wrap"><div id="day-tabs"></div></div>
+    <div class="day-date-bar" id="day-date-bar"></div>
     <div id="spot-list"></div>
     <div id="bottom-bar">
       <i class="ti ti-map-pin"></i><span id="total-spots">共 0 個景點</span>
@@ -1695,6 +1705,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
     <button class="mobile-sheet-handle" id="mobile-sheet-handle" title="切換抽屜高度"></button>
     <div class="mobile-sheet-head"><span id="mobile-sheet-title">行程清單</span></div>
     <div id="mobile-day-tabs"></div>
+    <div class="day-date-bar" id="mobile-day-date-bar"></div>
     <div class="mobile-search-wrap">
       <div class="mobile-search-row">
         <input id="mobile-search-input" type="text" placeholder="搜尋景點、餐廳、地址…"/>
@@ -1767,13 +1778,21 @@ const params=new URLSearchParams(location.search);
 const CLOUD_CONFIG_KEY='tp_cloud_config';
 const GAS_SYNC_KEY='tp_gas_sync_config';
 const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/supabase/';
-const APP_VERSION='20260719-compact-segments';
+const APP_VERSION='20260720-google-route-time';
 const SUPABASE_BOUND_APP=true;
 const SUPABASE_CONFIG={
   url:'https://pxoovfsvvmfxwibjtsvv.supabase.co',
   anonKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4b292ZnN2dm1meHdpYmp0c3Z2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ0MzI0NzksImV4cCI6MjEwMDAwODQ3OX0.ZgEQCr9ni7c2xJQHuJh8LytL9gXf0LM2pDpYjfCJ-zU'
 };
 const SUPABASE_SCHEMA_VERSION='split-trip-v1';
+const GOOGLE_ROUTE_FUNCTION='google-route';
+const DEFAULT_TRIP_TIME_ZONE=Intl.DateTimeFormat().resolvedOptions().timeZone||'Asia/Taipei';
+const COMMON_TIME_ZONES=[
+  ['Asia/Taipei','台北'],['Asia/Tokyo','東京'],['Asia/Seoul','首爾'],['Asia/Hong_Kong','香港'],
+  ['Asia/Singapore','新加坡'],['Europe/London','倫敦'],['Europe/Paris','巴黎'],
+  ['America/Los_Angeles','洛杉磯'],['America/New_York','紐約'],['Australia/Sydney','雪梨']
+];
+let googleRoutesAvailability='unknown';
 function sanitizeTripId(value){
   return String(value||'local-default').trim().replace(/[^\w-]/g,'-').slice(0,48)||'local-default';
 }
@@ -1878,11 +1897,22 @@ function ensureTripStructureIds(){
 }
 function makeTripState(){
   ensureTripStructureIds();
+  const persistedDays=days.map(day=>({
+    ...day,
+    spots:(day.spots||[]).map(spot=>({
+      ...spot,
+      seg:spot.seg?{
+        ...spot.seg,
+        // Google route content is refreshed on demand rather than stored long-term.
+        result:spot.seg.result?.source==='Google Maps'?null:spot.seg.result
+      }:spot.seg
+    }))
+  }));
   return {
     id:currentTripId,
     title:currentTripTitle,
     updatedAt:new Date().toISOString(),
-    data:{days,activeDay,orsApiKey,useApiKey},
+    data:{days:persistedDays,activeDay,orsApiKey,useApiKey},
     activityLog
   };
 }
@@ -3914,10 +3944,49 @@ function renderMarkers(){
 function renderSidebar(){
   updateAccessUI();
   renderTabs();
+  renderDayDateBar('day-date-bar');
   renderSpotList();
   renderMobileTabs();
+  renderDayDateBar('mobile-day-date-bar');
   renderMobileSpotList();
   updateMobileHeader();
+}
+
+function renderDayDateBar(elementId){
+  const el=document.getElementById(elementId);
+  const day=days[activeDay];
+  if(!el||!day)return;
+  const timeZone=day.timeZone||DEFAULT_TRIP_TIME_ZONE;
+  const known=COMMON_TIME_ZONES.some(([value])=>value===timeZone);
+  const options=COMMON_TIME_ZONES.map(([value,label])=>`<option value="${value}"${value===timeZone?' selected':''}>${label}</option>`).join('');
+  el.innerHTML=`
+    <i class="ti ti-calendar-event"></i>
+    <input class="day-date-input" type="date" value="${esc(day.dateLabel||'')}" aria-label="行程日期" ${canEdit()?'':'disabled'}>
+    <select class="day-timezone-select" aria-label="行程時區" ${canEdit()?'':'disabled'}>
+      ${known?'':`<option value="${esc(timeZone)}" selected>${esc(timeZone)}</option>`}${options}
+    </select>
+    <span class="day-date-hint">供交通估時</span>`;
+  el.querySelector('.day-date-input')?.addEventListener('change',e=>{
+    if(!requireEdit('修改行程日期'))return;
+    day.dateLabel=e.target.value||'';
+    recordActivity('set_day_date',{day:day.name,date:day.dateLabel});
+    invalidateGoogleResults(day);
+    saveLocal();
+    renderSidebar();
+  });
+  el.querySelector('.day-timezone-select')?.addEventListener('change',e=>{
+    if(!requireEdit('修改行程時區'))return;
+    day.timeZone=e.target.value||DEFAULT_TRIP_TIME_ZONE;
+    invalidateGoogleResults(day);
+    saveLocal();
+    renderSidebar();
+  });
+}
+
+function invalidateGoogleResults(day){
+  (day?.spots||[]).forEach(spot=>{
+    if(spot.seg?.result?.source==='Google Maps')spot.seg.result=null;
+  });
 }
 
 /* ── TABS (draggable to reorder) ── */
@@ -4595,7 +4664,13 @@ function cycleUiMode(){
 /* ═══════════════ DAY ACTIONS ═══════════════ */
 function addDay(){
   if(!requireEdit('新增天數'))return;
-  days.push({name:`第 ${days.length+1} 天`,spots:[]});
+  const previous=days[days.length-1]||{};
+  let dateLabel='';
+  if(previous.dateLabel){
+    const date=new Date(`${previous.dateLabel}T12:00:00`);
+    if(!Number.isNaN(date.getTime())){date.setDate(date.getDate()+1);dateLabel=date.toISOString().slice(0,10);}
+  }
+  days.push({name:`第 ${days.length+1} 天`,dateLabel,timeZone:previous.timeZone||DEFAULT_TRIP_TIME_ZONE,spots:[]});
   activeDay=days.length-1;
   recordActivity('add_day',{day:days[activeDay].name});
   saveLocal();
@@ -4857,7 +4932,10 @@ function segmentResultHtml(seg,mode){
   if(!seg.result)return `<span class="seg-result muted">${modeName}未計算</span>`;
   if(seg.result.loading)return `<span class="seg-result muted">${modeName}<i class="ti ti-loader-2"></i> 計算中</span>`;
   if(seg.result.error)return `<span class="seg-result muted" style="color:#e07" title="${esc(seg.result.message||'路線計算失敗')}">${modeName}${seg.result.message||'錯誤'}</span>`;
-  return `<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${esc(seg.result.warning||'')}">${modeName}${seg.result.duration} · ${seg.result.distance} ${formatRouteWarning(seg.result.warning)}${seg.result.warning?`<span class="seg-warning-text">已改用估算：${seg.result.warning}</span>`:''}</span>`;
+  const source=seg.result.source==='Google Maps'
+    ?` <a href="https://www.google.com/maps" target="_blank" rel="noopener" class="seg-source" title="交通時間由 Google Maps 計算">Google Maps</a>`
+    :(seg.result.source==='ORS'?'<span class="seg-source">ORS</span>':'');
+  return `<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${esc(seg.result.warning||'')}">${modeName}${seg.result.duration} · ${seg.result.distance} ${source} ${formatRouteWarning(seg.result.warning)}${seg.result.warning?`<span class="seg-warning-text">已改用估算：${seg.result.warning}</span>`:''}</span>`;
 }
 function googleRoutePlaceParam(spot){
   const text=[spot?.name,spot?.addr].filter(Boolean).join(' ').trim();
@@ -4874,10 +4952,87 @@ function googleDirectionsUrl(origin,destination,modeId){
   return `https://www.google.com/maps/dir/?api=1&origin=${googleRoutePlaceParam(origin)}&destination=${googleRoutePlaceParam(destination)}&travelmode=${travelmode}`;
 }
 
+function zonedLocalDateTimeToIso(dateLabel,timeValue,timeZone){
+  if(!dateLabel||!timeValue)return null;
+  const match=`${dateLabel}T${timeValue}`.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{1,2}):(\d{2})$/);
+  if(!match)return null;
+  const parts=match.slice(1).map(Number);
+  const desiredUtc=Date.UTC(parts[0],parts[1]-1,parts[2],parts[3],parts[4],0);
+  let instant=desiredUtc;
+  try{
+    const formatter=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+    for(let i=0;i<2;i++){
+      const values=Object.fromEntries(formatter.formatToParts(new Date(instant)).filter(p=>p.type!=='literal').map(p=>[p.type,Number(p.value)]));
+      const representedUtc=Date.UTC(values.year,values.month-1,values.day,values.hour,values.minute,values.second);
+      instant+=desiredUtc-representedUtc;
+    }
+    return new Date(instant).toISOString();
+  }catch(e){return new Date(desiredUtc).toISOString();}
+}
+
+function googleDepartureTime(day,origin){
+  return zonedLocalDateTimeToIso(day?.dateLabel,origin?.leaveTime||origin?.arrivalTime,day?.timeZone||DEFAULT_TRIP_TIME_ZONE);
+}
+
+async function fetchGoogleSegment(a,b,modeId,day){
+  if(googleRoutesAvailability==='unavailable')return null;
+  const config=getCloudConfig()||SUPABASE_CONFIG;
+  if(!config?.url||!config?.anonKey)return null;
+  const endpoint=`${String(config.url).replace(/\/$/,'')}/functions/v1/${GOOGLE_ROUTE_FUNCTION}`;
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),5000);
+  try{
+    const response=await fetch(endpoint,{
+      method:'POST',
+      signal:controller.signal,
+      headers:{'Content-Type':'application/json',apikey:config.anonKey,Authorization:`Bearer ${config.anonKey}`},
+      body:JSON.stringify({
+        origin:{lat:Number(a.lat),lng:Number(a.lng)},
+        destination:{lat:Number(b.lat),lng:Number(b.lng)},
+        mode:modeId,
+        departureTime:googleDepartureTime(day,a),
+        timeZone:day?.timeZone||DEFAULT_TRIP_TIME_ZONE
+      })
+    });
+    let data=null;
+    try{data=await response.json();}catch(e){}
+    if(!response.ok){
+      googleRoutesAvailability='unavailable';
+      throw new Error(data?.error||`Google 路線服務 ${response.status}`);
+    }
+    if(!Number.isFinite(data?.durationSec)||!Number.isFinite(data?.distanceM))throw new Error('Google 路線服務回傳格式不完整');
+    googleRoutesAvailability='available';
+    return{
+      duration:fmtDur(data.durationSec),distance:fmtDist(data.distanceM),
+      durationSec:data.durationSec,distanceM:data.distanceM,coords:null,
+      source:'Google Maps',fetchedAt:new Date().toISOString()
+    };
+  }catch(e){
+    googleRoutesAvailability='unavailable';
+    console.info('Google Routes unavailable; using existing route fallback.',e?.message||e);
+    return null;
+  }finally{
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchSegment(a,b,modeId){
   const mode=getMode(modeId);
   const isTransit=modeId==='transit';
   let apiWarning='';
+
+  const googleResult=await fetchGoogleSegment(a,b,modeId,days[activeDay]);
+  if(googleResult){
+    // Keep drawing route geometry from the existing map provider; Google supplies text-only time and distance.
+    try{
+      const profile=isTransit?'car':mode.osrm;
+      const url=`https://router.project-osrm.org/route/v1/${profile}/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`;
+      const response=await fetch(url);
+      const data=await response.json();
+      if(data.code==='Ok'&&data.routes?.length)googleResult.coords=data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+    }catch(e){}
+    return googleResult;
+  }
 
   if(useApiKey&&orsApiKey){
     // ── ORS: real per-mode routing ──
@@ -5461,6 +5616,8 @@ function exportJSON(){
     activityLog,
     days:days.map(d=>({
       name:d.name,
+      dateLabel:d.dateLabel||'',
+      timeZone:d.timeZone||DEFAULT_TRIP_TIME_ZONE,
       spots:d.spots.map(s=>({
         id:s.id, name:s.name, addr:s.addr||'',
         category:normalizeSpotCategory(s.category),
@@ -5476,7 +5633,7 @@ function exportJSON(){
           mode:s.seg.mode,
           manualDurationMin:s.seg.manualDurationMin??'',
           manualDistanceKm:s.seg.manualDistanceKm??'',
-          result:s.seg.result&&!s.seg.result.loading?s.seg.result:null
+          result:s.seg.result&&!s.seg.result.loading&&s.seg.result.source!=='Google Maps'?s.seg.result:null
         }:null
       }))
     }))
@@ -5520,6 +5677,8 @@ function applyLoadedData(payload, sourceName){
 
   days=payload.days.map(d=>({
     name:d.name||'未命名',
+    dateLabel:d.dateLabel||d.date_label||'',
+    timeZone:d.timeZone||DEFAULT_TRIP_TIME_ZONE,
     spots:(d.spots||[]).map(s=>({
       id:s.id||('imp_'+Math.random().toString(36).slice(2)),
       name:s.name||'未命名景點',
