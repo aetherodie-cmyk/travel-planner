@@ -725,7 +725,6 @@ body.view-only #mobile-api-key,
 body.view-only .spot-btn.move,
 body.view-only .spot-btn.copy,
 body.view-only .spot-btn.del,
-body.view-only .timeline-edit-btn,
 body.view-only .seg-actions,
 body.view-only .seg-mode-btns,
 body.view-only .day-tab-del,
@@ -777,15 +776,13 @@ body.view-only .empty-day small{display:none}
 .spot-timeline{display:flex;flex-direction:column;align-items:center;width:26px;flex-shrink:0}
 .spot-dot{width:21px;height:21px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
 .spot-vline{width:2px;flex:1;min-height:6px;background:var(--line);margin:0 auto}
-.spot-body-wrap{flex:1;min-width:0;max-width:100%;padding-bottom:5px;overflow:hidden}
+.spot-body-wrap{flex:1;min-width:0;max-width:100%;padding-bottom:5px;overflow:visible}
 .spot-item{display:flex;align-items:flex-start;gap:7px;width:100%;min-width:0;box-sizing:border-box;padding:10px 11px 11px;border:1px solid #D8DADC;border-radius:9px;cursor:grab;background:var(--surface);box-shadow:0 1px 3px rgba(20,27,36,.05);transition:border-color .15s,background .15s,box-shadow .15s}
 .spot-item:hover{border-color:#C8CDD2;background:#fff;box-shadow:0 2px 8px rgba(20,27,36,.08)}
 .spot-item.dragging{opacity:.4;border-color:var(--primary)}
 .spot-item.drag-over{border-color:var(--primary);background:var(--primary-soft)}
 .spot-info{flex:1;min-width:0}
-.spot-kind{display:block;color:var(--primary);font-size:10px;font-weight:850;line-height:1;margin-bottom:5px}
 .spot-kind-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;min-width:0}
-.spot-kind-row .spot-kind{margin-bottom:0}
 .spot-category-tag{display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:6px;font-size:10px;font-weight:850;line-height:1;border:1px solid transparent;white-space:nowrap}
 .spot-category-tag.cat-lodging{color:#185FA5;background:#E6F1FB;border-color:#C8DDF2}
 .spot-category-tag.cat-spot{color:#25833B;background:#ECF6ED;border-color:#CDE8D2}
@@ -796,16 +793,23 @@ body.view-only .empty-day small{display:none}
 .spot-meta{font-size:12px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .timeline-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px}
 .timeline-summary{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px;min-width:0;max-width:100%;overflow:hidden}
+.timeline-summary-toggle{border:none;background:transparent;padding:0;cursor:pointer;text-align:left;font-family:inherit;width:auto}
+.timeline-summary-toggle:disabled{cursor:default}
+.timeline-summary-toggle:not(:disabled):hover .timeline-summary-pill{border-color:var(--primary);background:var(--primary-soft);color:var(--primary-strong)}
 .timeline-summary-pill{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:28px;border-radius:9px;background:var(--surface-soft);border:1px solid var(--line-soft);padding:4px 8px;color:var(--text);font-size:12px;font-weight:800;white-space:nowrap;flex:0 1 auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .timeline-summary-pill.muted{color:var(--muted);font-weight:700}
 .timeline-summary .timeline-summary-pill:first-child{flex:0 1 auto}
 .timeline-summary .timeline-summary-pill:nth-child(2){flex:0 1 auto}
-.timeline-edit-btn,.timeline-auto-btn{border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--muted);height:28px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;flex:0 0 auto}
-.timeline-edit-btn{display:none;width:32px;padding:0;font-size:14px}
-.spot-item.tools-open .timeline-edit-btn,.timeline-box.editor-open .timeline-edit-btn{display:inline-flex}
-.timeline-edit-btn:hover,.timeline-auto-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
+.timeline-auto-btn{border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--muted);height:32px;padding:0 10px;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.timeline-auto-btn:hover{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
 .timeline-editor{display:none;margin-top:7px;padding:8px;border:1px solid var(--line-soft);border-radius:12px;background:#FAFBFA}
 .timeline-editor.open{display:block}
+.timeline-editor .timeline-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;margin-top:0}
+.timeline-editor .time-chip{min-width:0;min-height:58px;flex-direction:column;align-items:stretch;gap:5px;padding:7px}
+.timeline-editor .time-chip>span{font-size:10px}
+.timeline-editor .time-select{width:100%;min-width:0}
+.timeline-editor .time-stay{width:100%;height:24px;border-radius:7px;background:#fff;text-align:center;padding:0 5px}
+.timeline-editor .timeline-auto-btn,.timeline-editor .time-note{grid-column:1 / -1}
 .time-note{width:100%;font-size:11px;line-height:1.45;color:var(--muted);padding:0 2px}
 .time-note.warn{color:#BA7517;font-weight:700}
 .time-chip{display:flex;align-items:center;gap:6px;background:var(--surface-soft);border:1px solid var(--line-soft);border-radius:9px;padding:4px 6px 4px 8px;font-size:11px;font-weight:700;color:var(--muted);min-height:32px}
@@ -820,7 +824,6 @@ body.view-only .empty-day small{display:none}
 @media (min-width:761px) and (max-width:1180px){
   #spot-list .timeline-summary{gap:5px}
   #spot-list .timeline-summary-pill{min-height:26px;padding:3px 7px;font-size:11px}
-  #spot-list .timeline-edit-btn{width:30px;height:26px;padding:0;font-size:13px}
 }
 .time-picker-popover{position:fixed;z-index:2600;width:248px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 44px rgba(0,0,0,.2);padding:10px;display:none}
 .time-picker-popover.open{display:block}
@@ -841,9 +844,13 @@ body.view-only .empty-day small{display:none}
 .time-picker-actions button{flex:1;height:34px;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer}
 .time-cancel-btn,.time-clear-btn{border:1px solid var(--line);background:var(--surface);color:var(--muted)}
 .time-done-btn{border:none;background:var(--primary);color:#fff}
-.spot-actions{display:none;gap:2px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end;max-width:44px}
+.spot-item{position:relative}
+.spot-item.tools-open{z-index:10}
+.spot-actions{display:none;position:absolute;right:10px;top:44px;z-index:8;width:158px;padding:6px;gap:2px;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 28px rgba(20,27,36,.18)}
 .spot-item.tools-open .spot-actions{display:flex}
-.spot-btn{width:20px;height:20px;border:none;background:none;cursor:pointer;color:#B4B8BE;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;padding:0}
+.spot-btn{width:100%;height:36px;border:none;background:none;cursor:pointer;color:var(--text);border-radius:8px;display:flex;align-items:center;justify-content:flex-start;gap:9px;font-size:12px;font-weight:750;padding:0 10px}
+.spot-btn i{font-size:15px;color:var(--muted)}
+.spot-btn span{white-space:nowrap}
 .spot-btn:hover{background:var(--surface-soft);color:var(--text)}
 .spot-btn.del:hover{color:var(--danger);background:#fdf0f0}
 .spot-btn.move:hover{color:var(--primary-strong);background:var(--primary-soft)}
@@ -1208,12 +1215,10 @@ body.mobile-ui #mobile-sheet{position:absolute;left:0;right:0;bottom:0;z-index:1
 #mobile-spot-list .spot-btn{width:36px;height:36px;font-size:18px;color:var(--muted)}
 #mobile-spot-list .spot-more-btn{grid-area:more;justify-self:end;display:inline-flex;width:34px;height:34px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--muted);align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;margin-top:28px}
 #mobile-spot-list .spot-more-btn.active{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-strong)}
-#mobile-spot-list .spot-actions{grid-area:actions;gap:1px;max-width:none;flex-wrap:nowrap;justify-content:flex-start;background:#F7F8F9;border-radius:12px;padding:6px;margin-top:8px}
-#mobile-spot-list .spot-item:hover .spot-actions,
-#mobile-spot-list .spot-item:hover .timeline-edit-btn{display:none}
+#mobile-spot-list .spot-actions{display:none;position:absolute;right:8px;top:66px;z-index:8;width:172px;gap:2px;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px;margin:0;box-shadow:0 14px 30px rgba(20,27,36,.2)}
+#mobile-spot-list .spot-item:hover .spot-actions{display:none}
 #mobile-spot-list .spot-item.tools-open .spot-actions{display:flex}
-#mobile-spot-list .spot-item.tools-open .timeline-edit-btn,
-#mobile-spot-list .timeline-box.editor-open .timeline-edit-btn{display:inline-flex}
+#mobile-spot-list .spot-btn{width:100%;height:40px;font-size:13px;padding:0 11px;justify-content:flex-start}
 #mobile-spot-list .spot-note-dot{position:absolute;right:48px;top:24px;width:8px;height:8px;margin-top:0;background:#D67B00}
 #mobile-spot-list .seg-connector{padding:0 0 3px}
 #mobile-spot-list .seg-body{padding:3px 0;gap:5px 8px}
@@ -1238,6 +1243,12 @@ body.mobile-ui #mobile-sheet{position:absolute;left:0;right:0;bottom:0;z-index:1
 #mobile-spot-list .seg-manual-editor{gap:8px;padding:9px;align-items:stretch;grid-template-columns:1fr 1fr}
 #mobile-spot-list .seg-manual-field{flex:1;min-width:120px;height:40px;font-size:12px}
 #mobile-spot-list .seg-manual-save,#mobile-spot-list .seg-manual-cancel{height:40px;font-size:13px}
+#mobile-spot-list .timeline-summary{margin-top:10px}
+#mobile-spot-list .timeline-summary-pill{min-height:38px;font-size:14px;padding:7px 10px}
+#mobile-spot-list .timeline-editor .timeline-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#mobile-spot-list .timeline-editor .time-chip{height:auto;min-height:66px;min-width:0;padding:7px 5px}
+#mobile-spot-list .timeline-editor .time-select{width:100%;min-width:0;font-size:14px}
+#mobile-spot-list .timeline-editor .time-stay{width:100%;font-size:14px}
 .mobile-sheet-actions{position:absolute;left:0;right:0;bottom:0;padding:10px 16px calc(env(safe-area-inset-bottom) + 14px);background:linear-gradient(180deg,rgba(255,255,255,.88),#fff 30%);border-top:1px solid var(--line-soft);display:flex;align-items:center;gap:10px;z-index:4}
 .mobile-total{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;margin-right:auto;white-space:nowrap}
 .mobile-secondary-btn,.mobile-primary-btn{height:44px;border-radius:12px;font-size:15px;font-weight:750;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 14px;white-space:nowrap}
@@ -1779,7 +1790,7 @@ const params=new URLSearchParams(location.search);
 const CLOUD_CONFIG_KEY='tp_cloud_config';
 const GAS_SYNC_KEY='tp_gas_sync_config';
 const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/supabase/';
-const APP_VERSION='20260720-stable-json-editor';
+const APP_VERSION='20260720-simplified-spot-cards';
 const SUPABASE_BOUND_APP=true;
 const SUPABASE_CONFIG={
   url:'https://pxoovfsvvmfxwibjtsvv.supabase.co',
@@ -4166,23 +4177,20 @@ function timelineHtml(spot,i,spots){
   const travelMissing=i>0&&parseClock(spots[i-1]?.leaveTime)!==null&&getTravelMinutesFromSpot(spots[i-1])===null;
   const expanded=expandedTimelineIds.has(spot.id);
   const hasAny=spot.arrivalTime||spot.leaveTime||spot.stayMinutes!==undefined&&spot.stayMinutes!=='';
-  const range=spot.arrivalTime||spot.leaveTime?`${timeLabel(spot.arrivalTime)} → ${timeLabel(spot.leaveTime)}`:'未排時間';
+  const range=spot.arrivalTime||spot.leaveTime?`${timeLabel(spot.arrivalTime)} → ${timeLabel(spot.leaveTime)}`:'設定時間與停留';
   const stay=spot.stayMinutes!==undefined&&spot.stayMinutes!==''?`停留 ${spot.stayMinutes} 分`:'停留未設定';
   const manualNote=i>0&&spot.arrivalTime&&spot.expectedArrivalTime&&spot.timeAutoArrival===false?minutesDiffText(spot.arrivalTime,spot.expectedArrivalTime):'';
   const autoNote=i>0&&spot.expectedArrivalTime&&spot.timeAutoArrival!==false?`自動預估抵達 ${spot.expectedArrivalTime}`:'';
   return `<div class="timeline-box${expanded?' editor-open':''}" data-time-idx="${i}">
-    <div class="timeline-summary">
-      <span class="timeline-summary-pill${hasAny?'':' muted'}"><i class="ti ti-clock"></i> ${range}</span>
-      <span class="timeline-summary-pill muted">${stay}</span>
-      ${manualNote?`<span class="timeline-summary-pill muted" title="自動預估 ${spot.expectedArrivalTime}">${manualNote}</span>`:''}
+    <button class="timeline-summary timeline-summary-toggle" type="button" title="${canEdit()?(expanded?'收合時間設定':'設定抵達、停留與離開時間'):'行程時間'}" ${canEdit()?'':'disabled'}>
+      <span class="timeline-summary-pill${hasAny?'':' muted'}"><i class="ti ${expanded?'ti-chevron-up':'ti-clock'}"></i> ${range}${hasAny?` · ${stay}`:''}${manualNote?` · ${manualNote}`:''}</span>
       ${travelMissing?'<span class="time-chip warn"><i class="ti ti-route"></i> 先計算路段</span>':''}
-      <button class="timeline-edit-btn" type="button" title="${expanded?'收合時間編輯':'編輯時間'}" aria-label="${expanded?'收合時間編輯':'編輯時間'}"><i class="ti ti-pencil"></i></button>
-    </div>
+    </button>
     <div class="timeline-editor${expanded?' open':''}">
       <div class="timeline-row">
-        <label class="time-chip"><span>抵達</span>${timeButtonHtml('arrivalTime',spot.arrivalTime)}</label>
+        <div class="time-chip"><span>抵達</span>${timeButtonHtml('arrivalTime',spot.arrivalTime)}</div>
         <label class="time-chip"><span>停留</span><input class="time-stay" type="number" min="0" step="5" placeholder="分" value="${spot.stayMinutes??''}"></label>
-        <label class="time-chip"><span>離開</span>${timeButtonHtml('leaveTime',spot.leaveTime)}</label>
+        <div class="time-chip"><span>離開</span>${timeButtonHtml('leaveTime',spot.leaveTime)}</div>
         ${i>0&&spot.timeAutoArrival===false?'<button class="timeline-auto-btn" type="button"><i class="ti ti-refresh"></i> 恢復自動</button>':''}
         ${manualNote?`<div class="time-note warn">目前為手動抵達時間；自動預估是 ${spot.expectedArrivalTime}，${manualNote}。</div>`:''}
         ${autoNote?`<div class="time-note">${autoNote}。可手動修改，系統會標注與預估的差異。</div>`:''}
@@ -4203,8 +4211,8 @@ function attachTimelineHandlers(root,i){
     input.addEventListener('touchstart',stop,{passive:true});
   });
   const spot=days[activeDay].spots[i];
-  const editBtn=box.querySelector('.timeline-edit-btn');
-  editBtn?.addEventListener('click',e=>{
+  const summaryBtn=box.querySelector('.timeline-summary-toggle');
+  summaryBtn?.addEventListener('click',e=>{
     e.stopPropagation();
     if(expandedTimelineIds.has(spot.id))expandedTimelineIds.delete(spot.id);
     else expandedTimelineIds.add(spot.id);
@@ -4507,7 +4515,7 @@ function renderSpotList(){
       <div class="spot-body-wrap">
         <div class="spot-item${toolsOpen?' tools-open':''}" draggable="${canEdit()?'true':'false'}" data-idx="${i}">
           <div class="spot-info">
-            <div class="spot-kind-row"><div class="spot-kind">景點</div>${spotCategoryHtml(spot)}</div>
+            <div class="spot-kind-row">${spotCategoryHtml(spot)}</div>
             <div class="spot-name">${spot.name}</div>
             <div class="spot-meta">${spot.addr||'自訂位置'}</div>
             ${timelineHtml(spot,i,spots)}
@@ -4515,10 +4523,10 @@ function renderSpotList(){
           ${spot.notes&&Object.values(spot.notes).some(v=>v)?'<div class="spot-note-dot" title="有個人筆記"></div>':''}
           ${canEdit()?`<button class="spot-more-btn${toolsOpen?' active':''}" type="button" title="${toolsOpen?'收合操作':'更多操作'}" aria-label="${toolsOpen?'收合操作':'更多操作'}"><i class="ti ti-dots"></i></button>`:''}
           <div class="spot-actions">
-            <button class="spot-btn info-btn" title="查詢景點資訊"><i class="ti ti-info-circle"></i></button>
-            <button class="spot-btn copy" title="複製景點"><i class="ti ti-copy"></i></button>
-            <button class="spot-btn move" title="移到其他天"><i class="ti ti-arrows-move"></i></button>
-            <button class="spot-btn del" title="移除"><i class="ti ti-trash"></i></button>
+            <button class="spot-btn info-btn" title="編輯景點資料"><i class="ti ti-pencil"></i><span>編輯景點資料</span></button>
+            <button class="spot-btn copy" title="複製景點"><i class="ti ti-copy"></i><span>複製景點</span></button>
+            <button class="spot-btn move" title="移到其他天"><i class="ti ti-arrows-move"></i><span>移到其他天</span></button>
+            <button class="spot-btn del" title="移除"><i class="ti ti-trash"></i><span>移除景點</span></button>
           </div>
         </div>
       </div>`;
@@ -4543,7 +4551,7 @@ function renderSpotList(){
       activeSpotToolsId=activeSpotToolsId===spot.id?null:spot.id;
       renderSidebar();
     });
-    card.querySelector('.spot-btn.info-btn').onclick=()=>openInfoModal(spot.id);
+    card.querySelector('.spot-btn.info-btn').onclick=()=>canEdit()?openSpotEditModal(spot):openInfoModal(spot.id);
     attachTimelineHandlers(card,i);
     si.addEventListener('mouseenter',()=>{const m=markers[spot.id];if(m)m.openPopup();});
     si.addEventListener('mouseleave',()=>map.closePopup());
@@ -4583,7 +4591,7 @@ function renderMobileSpotList(){
       <div class="spot-body-wrap">
         <div class="spot-item${toolsOpen?' tools-open':''}" data-idx="${i}">
           <div class="spot-info">
-            <div class="spot-kind-row"><div class="spot-kind">景點</div>${spotCategoryHtml(spot)}</div>
+            <div class="spot-kind-row">${spotCategoryHtml(spot)}</div>
             <div class="spot-name">${spot.name}</div>
             <div class="spot-meta">${spot.addr||'自訂位置'}</div>
             ${timelineHtml(spot,i,spots)}
@@ -4591,10 +4599,10 @@ function renderMobileSpotList(){
           ${spot.notes&&Object.values(spot.notes).some(v=>v)?'<div class="spot-note-dot" title="有個人筆記"></div>':''}
           ${canEdit()?`<button class="spot-more-btn${toolsOpen?' active':''}" type="button" title="${toolsOpen?'收合操作':'更多操作'}" aria-label="${toolsOpen?'收合操作':'更多操作'}"><i class="ti ti-dots"></i></button>`:''}
           <div class="spot-actions">
-            <button class="spot-btn info-btn" title="查詢景點資訊"><i class="ti ti-info-circle"></i></button>
-            <button class="spot-btn copy" title="複製景點"><i class="ti ti-copy"></i></button>
-            <button class="spot-btn move" title="移到其他天"><i class="ti ti-arrows-move"></i></button>
-            <button class="spot-btn del" title="移除"><i class="ti ti-trash"></i></button>
+            <button class="spot-btn info-btn" title="編輯景點資料"><i class="ti ti-pencil"></i><span>編輯景點資料</span></button>
+            <button class="spot-btn copy" title="複製景點"><i class="ti ti-copy"></i><span>複製景點</span></button>
+            <button class="spot-btn move" title="移到其他天"><i class="ti ti-arrows-move"></i><span>移到其他天</span></button>
+            <button class="spot-btn del" title="移除"><i class="ti ti-trash"></i><span>移除景點</span></button>
           </div>
         </div>
       </div>`;
@@ -4614,7 +4622,7 @@ function renderMobileSpotList(){
       card.querySelector('.spot-btn.copy').onclick=e=>{e.stopPropagation();duplicateSpot(i);};
       card.querySelector('.spot-btn.move').onclick=e=>{e.stopPropagation();openMoveModal(i);};
     }
-    card.querySelector('.spot-btn.info-btn').onclick=e=>{e.stopPropagation();openInfoModal(spot.id);};
+    card.querySelector('.spot-btn.info-btn').onclick=e=>{e.stopPropagation();canEdit()?openSpotEditModal(spot):openInfoModal(spot.id);};
     attachTimelineHandlers(card,i);
     el.appendChild(card);
 
