@@ -1046,8 +1046,8 @@ body.view-only .empty-day small{display:none}
 .key-sec-btn.danger{border-color:#fcc;background:#fff5f5;color:#A32D2D}
 #key-status{font-size:11px;color:#888;margin-top:6px;min-height:16px}
 /* info modal */
-#info-modal .modal-box{width:400px;padding:0;overflow:hidden}
-#info-modal-body{padding:16px;max-height:520px;overflow-y:auto}
+#info-modal .modal-box{width:min(640px,calc(100vw - 32px));padding:0;overflow:hidden}
+#info-modal-body{padding:16px 18px 20px;max-height:calc(100dvh - 112px);overflow-y:auto}
 .info-view,.info-edit{display:none}
 .info-view.active,.info-edit.active{display:block}
 .info-action-row{display:flex;align-items:center;gap:8px;margin-top:12px}
@@ -1099,25 +1099,45 @@ body.view-only .empty-day small{display:none}
 .spot-form-field input:focus,.spot-form-field textarea:focus{border-color:#378ADD}
 .spot-form-field textarea{min-height:82px;resize:vertical}
 .spot-form-section-title{font-size:11px;font-weight:800;color:#777;margin:4px 0 8px;display:flex;align-items:center;gap:5px}
-.spot-editor-top-row{display:grid;grid-template-columns:auto minmax(180px,1fr);gap:10px;align-items:end;margin-bottom:10px}
+.spot-editor-json-row{display:flex;justify-content:flex-end;margin-bottom:10px}
+.spot-editor-primary{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-bottom:14px}
 .spot-editor-category{display:flex;flex-direction:column;gap:4px;min-width:0}
 .spot-editor-category label{font-size:10px;font-weight:700;color:#999;letter-spacing:.4px}
-.spot-json-panel{display:none;margin:8px 0 12px}
-.spot-json-panel textarea{width:100%;min-height:118px;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:12px;font-family:monospace;color:#111;outline:none;resize:vertical;line-height:1.6}
+.spot-json-panel{display:none;margin:0;padding:4px 0 16px}
+.spot-json-panel textarea{width:100%;min-height:210px;border:1px solid #ddd;border-radius:10px;padding:12px;font-size:12px;font-family:monospace;color:#111;outline:none;resize:vertical;line-height:1.6}
 .spot-json-panel textarea:focus{border-color:#7F77DD}
 .spot-json-actions{display:flex;gap:7px;margin-top:7px}
 .spot-json-msg{font-size:11px;min-height:16px;margin-top:6px;line-height:1.4}
+.spot-form-content{display:block}
+.spot-collapsible{border:1px solid var(--line-soft);border-radius:12px;background:#FAFBFA;margin:10px 0;overflow:hidden}
+.spot-collapsible summary{list-style:none;display:flex;align-items:center;gap:7px;padding:12px 14px;cursor:pointer;color:#555;font-size:12px;font-weight:800;user-select:none}
+.spot-collapsible summary::-webkit-details-marker{display:none}
+.spot-collapsible summary::after{content:'⌄';font-size:16px;color:#888;margin-left:4px;transition:transform .15s}
+.spot-collapsible[open] summary::after{transform:rotate(180deg)}
+.spot-collapsible summary i{font-size:15px;color:#777}
+.spot-collapsible-hint{font-size:10px;color:#999;font-weight:600;margin-left:auto;white-space:nowrap}
+.spot-collapsible-body{padding:2px 12px 12px}
+.spot-collapsible-body .spot-form-grid:last-child{margin-bottom:0}
 .notes-save-btn{width:100%;padding:8px;border:1px solid #378ADD;border-radius:8px;background:#E6F1FB;cursor:pointer;font-size:13px;font-weight:500;color:#185FA5;margin-top:12px}
 .notes-save-btn:hover{background:#d0e8f8}
-.note-action-row{position:sticky;bottom:0;background:#fff;padding:12px 0 4px;margin-top:12px;z-index:3}
+.note-action-row{position:sticky;bottom:-1px;background:#fff;padding:12px 0 4px;margin-top:12px;z-index:3;box-shadow:0 -10px 18px rgba(255,255,255,.96)}
 .note-action-row .notes-save-btn{flex:1;height:42px;margin:0;font-weight:800}
 .note-action-row .info-cancel-btn{height:42px;flex:0 0 84px}
 .notes-saved{font-size:11px;color:#0F6E56;text-align:center;margin-top:6px;min-height:16px}
 /* spot notes indicator */
 .spot-note-dot{width:6px;height:6px;border-radius:50%;background:#BA7517;flex-shrink:0;margin-top:6px}
 /* json paste trigger */
-.json-paste-trigger{padding:4px 10px;border:1px solid #ddd;border-radius:6px;background:#f5f5f5;cursor:pointer;font-size:11px;color:#555;display:flex;align-items:center;justify-content:center;gap:4px;font-weight:500;white-space:nowrap}
+.json-paste-trigger{height:34px;padding:0 11px;border:1px solid #ddd;border-radius:8px;background:#f5f5f5;cursor:pointer;font-size:11px;color:#555;display:flex;align-items:center;justify-content:center;gap:4px;font-weight:700;white-space:nowrap}
 .json-paste-trigger:hover{background:#EEEDFE;border-color:#7F77DD;color:#534AB7}
+@media(max-width:980px){
+  #info-modal .modal-box{max-height:calc(100dvh - 24px)}
+  #info-modal-body{max-height:calc(100dvh - 94px)}
+  .note-action-row{position:static;box-shadow:none;border-top:1px solid var(--line-soft);padding-top:14px}
+}
+@media(max-width:600px){
+  .spot-editor-primary,.spot-form-grid{grid-template-columns:1fr}
+  .spot-collapsible-hint{max-width:52%;overflow:hidden;text-overflow:ellipsis}
+}
 /* leaflet popup */
 .leaflet-popup-content-wrapper{border-radius:8px!important;border:1px solid #e5e5e5!important;box-shadow:0 2px 8px rgba(0,0,0,.1)!important}
 .leaflet-popup-tip{display:none}
@@ -1608,44 +1628,56 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
     <div id="info-modal-body">
       <div class="info-view active" id="info-view"></div>
       <div class="info-edit" id="info-edit">
-        <div class="spot-editor-top-row">
-          <button class="json-paste-trigger" id="json-paste-btn" type="button" title="貼入 JSON 自動填入"><i class="ti ti-code"></i> 貼入 JSON</button>
-          <div class="spot-editor-category"><label>分類</label><select class="import-day-sel" id="note-category" style="height:38px"></select></div>
+        <div class="spot-editor-json-row">
+          <button class="json-paste-trigger" id="json-paste-btn" type="button" title="貼入 JSON 自動填入"><i class="ti ti-code"></i> 使用 JSON 填入</button>
         </div>
         <div class="spot-json-panel" id="json-paste-area">
           <textarea id="json-input" placeholder='例：{ "name": "十和田湖", "address": "青森縣十和田市", "lat": 40.468, "lng": 140.878, "opening_hours": "全天開放", "admission_fee": "免費", "phone": "0176-75-2425", "website": "https://example.com", "remarks": "注意天候" }'></textarea>
           <div class="spot-json-actions">
             <button class="notes-save-btn" id="json-parse-btn" type="button" style="margin-top:0"><i class="ti ti-check"></i> 解析到欄位</button>
-            <button class="info-cancel-btn" id="json-cancel-btn" type="button"><i class="ti ti-chevron-up"></i> 收起</button>
+            <button class="info-cancel-btn" id="json-cancel-btn" type="button"><i class="ti ti-forms"></i> 查看表單</button>
           </div>
           <div class="spot-json-msg" id="json-parse-msg"></div>
         </div>
-        <div class="spot-form-section-title"><i class="ti ti-calendar"></i> 行程位置</div>
-        <div class="spot-form-grid full">
-          <div class="spot-form-field"><label>加入 / 移動到</label><select class="import-day-sel" id="note-day" style="height:38px"></select></div>
+        <div class="spot-form-content" id="spot-form-content">
+          <div class="spot-editor-primary">
+            <div class="spot-editor-category"><label>分類</label><select class="import-day-sel" id="note-category" style="height:38px"></select></div>
+            <div class="spot-form-field"><label>加入 / 移動到</label><select class="import-day-sel" id="note-day" style="height:38px"></select></div>
+          </div>
+          <div class="spot-form-section-title"><i class="ti ti-map-pin"></i> 景點資料</div>
+          <div class="spot-form-grid full">
+            <div class="spot-form-field"><label>景點名稱</label><input id="note-name" placeholder="例：十和田湖"/></div>
+            <div class="spot-form-field"><label>地址</label><input id="note-addr" placeholder="例：青森縣十和田市"/></div>
+          </div>
+          <details class="spot-collapsible" id="spot-location-details">
+            <summary><i class="ti ti-current-location"></i> 精確位置 <span class="spot-collapsible-hint" id="spot-location-hint">緯度、經度</span></summary>
+            <div class="spot-collapsible-body">
+              <div class="spot-form-grid">
+                <div class="spot-form-field"><label>緯度</label><input id="note-lat" inputmode="decimal" placeholder="例：40.468"/></div>
+                <div class="spot-form-field"><label>經度</label><input id="note-lng" inputmode="decimal" placeholder="例：140.878"/></div>
+              </div>
+            </div>
+          </details>
+          <details class="spot-collapsible" id="spot-notes-details">
+            <summary><i class="ti ti-notes"></i> 更多資料與筆記 <span class="spot-collapsible-hint" id="spot-notes-hint">營業時間、門票、聯絡資訊</span></summary>
+            <div class="spot-collapsible-body">
+              <div class="spot-form-grid">
+                <div class="spot-form-field"><label>營業時間</label><input id="note-hours" placeholder="例：09:00–17:00，週一公休"/></div>
+                <div class="spot-form-field"><label>門票費用</label><input id="note-fee" placeholder="例：全票 200 元，學生 100 元"/></div>
+                <div class="spot-form-field"><label>電話</label><input id="note-phone" placeholder="例：02-2345-6789"/></div>
+                <div class="spot-form-field"><label>官網</label><input id="note-website" placeholder="例：https://www.example.com"/></div>
+              </div>
+              <div class="spot-form-grid full">
+                <div class="spot-form-field"><label>個人備註</label><textarea id="note-memo" placeholder="行前提醒、停車資訊、推薦餐廳…"></textarea></div>
+              </div>
+            </div>
+          </details>
+          <div class="info-action-row note-action-row">
+            <button class="notes-save-btn" id="notes-save-btn" style="margin-top:0"><i class="ti ti-device-floppy"></i> 儲存到景點</button>
+            <button class="info-cancel-btn" id="notes-cancel-btn"><i class="ti ti-x"></i> 取消</button>
+          </div>
+          <div class="notes-saved" id="notes-saved-msg"></div>
         </div>
-        <div class="spot-form-section-title"><i class="ti ti-map-pin"></i> 景點資料</div>
-        <div class="spot-form-grid">
-          <div class="spot-form-field"><label>景點名稱</label><input id="note-name" placeholder="例：十和田湖"/></div>
-          <div class="spot-form-field"><label>地址</label><input id="note-addr" placeholder="例：青森縣十和田市"/></div>
-          <div class="spot-form-field"><label>緯度</label><input id="note-lat" inputmode="decimal" placeholder="例：40.468"/></div>
-          <div class="spot-form-field"><label>經度</label><input id="note-lng" inputmode="decimal" placeholder="例：140.878"/></div>
-        </div>
-        <div class="spot-form-section-title"><i class="ti ti-pencil"></i> 我的筆記</div>
-        <div class="spot-form-grid">
-          <div class="spot-form-field"><label>營業時間</label><input id="note-hours" placeholder="例：09:00–17:00，週一公休"/></div>
-          <div class="spot-form-field"><label>門票費用</label><input id="note-fee" placeholder="例：全票 200 元，學生 100 元"/></div>
-          <div class="spot-form-field"><label>電話</label><input id="note-phone" placeholder="例：02-2345-6789"/></div>
-          <div class="spot-form-field"><label>官網</label><input id="note-website" placeholder="例：https://www.example.com"/></div>
-        </div>
-        <div class="spot-form-grid full">
-          <div class="spot-form-field"><label>個人備註</label><textarea id="note-memo" placeholder="行前提醒、停車資訊、推薦餐廳…"></textarea></div>
-        </div>
-        <div class="info-action-row note-action-row">
-          <button class="notes-save-btn" id="notes-save-btn" style="margin-top:0"><i class="ti ti-device-floppy"></i> 儲存到景點</button>
-          <button class="info-cancel-btn" id="notes-cancel-btn"><i class="ti ti-x"></i> 取消</button>
-        </div>
-        <div class="notes-saved" id="notes-saved-msg"></div>
       </div>
     </div>
   </div>
@@ -1790,7 +1822,7 @@ const params=new URLSearchParams(location.search);
 const CLOUD_CONFIG_KEY='tp_cloud_config';
 const GAS_SYNC_KEY='tp_gas_sync_config';
 const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/supabase/';
-const APP_VERSION='20260720-simplified-spot-cards';
+const APP_VERSION='20260720-spacious-spot-editor';
 const SUPABASE_BOUND_APP=true;
 const SUPABASE_CONFIG={
   url:'https://pxoovfsvvmfxwibjtsvv.supabase.co',
@@ -5297,9 +5329,30 @@ function populateNoteDaySelect(selectedIdx=activeDay){
   if(!sel)return;
   sel.innerHTML=days.map((d,i)=>`<option value="${i}"${i===selectedIdx?' selected':''}>${d.name}</option>`).join('');
 }
-function resetEditorJsonPanel(){
+function setSpotEditorJsonMode(enabled){
   const area=document.getElementById('json-paste-area');
-  if(area)area.style.display='none';
+  const form=document.getElementById('spot-form-content');
+  const trigger=document.getElementById('json-paste-btn');
+  if(area)area.style.display=enabled?'block':'none';
+  if(form)form.style.display=enabled?'none':'block';
+  if(trigger)trigger.style.display=enabled?'none':'flex';
+  if(enabled)requestAnimationFrame(()=>document.getElementById('json-input')?.focus());
+}
+function updateSpotEditorSectionHints(){
+  const value=id=>document.getElementById(id)?.value.trim()||'';
+  const hasLocation=value('note-lat')&&value('note-lng');
+  const locationHint=document.getElementById('spot-location-hint');
+  if(locationHint)locationHint.textContent=hasLocation?'已有座標':'尚未設定';
+  const noteCount=['note-hours','note-fee','note-phone','note-website','note-memo'].filter(id=>value(id)).length;
+  const notesHint=document.getElementById('spot-notes-hint');
+  if(notesHint)notesHint.textContent=noteCount?`已有 ${noteCount} 項資料`:'尚未填寫';
+}
+function resetSpotEditorSections(){
+  document.querySelectorAll('#info-edit .spot-collapsible').forEach(section=>{section.open=false;});
+  updateSpotEditorSectionHints();
+}
+function resetEditorJsonPanel(){
+  setSpotEditorJsonMode(false);
   setFieldValue('json-input','');
   const msg=document.getElementById('json-parse-msg');
   if(msg)msg.textContent='';
@@ -5319,12 +5372,14 @@ function loadNoteInputs(spot){
   document.getElementById('note-website').value=n.website||'';
   document.getElementById('note-memo').value=n.memo||'';
   resetEditorJsonPanel();
+  resetSpotEditorSections();
 }
 function clearNoteInputs(selectedIdx=activeDay){
   populateNoteDaySelect(selectedIdx);
   populateCategorySelect('note-category','spot');
   ['name','addr','lat','lng','hours','fee','phone','website','memo'].forEach(k=>setFieldValue(`note-${k}`,''));
   resetEditorJsonPanel();
+  resetSpotEditorSections();
 }
 function setEditorSaveLabel(){
   const btn=document.getElementById('notes-save-btn');
@@ -5352,6 +5407,7 @@ function openSpotCreateModal(initialData={}){
   document.getElementById('notes-saved-msg').textContent='';
   clearNoteInputs(initialData.dayIdx??activeDay);
   applySpotDataToForm(initialData,'note');
+  updateSpotEditorSectionHints();
   rememberSpotEditorState();
   setEditorSaveLabel();
   document.getElementById('info-modal').classList.add('open');
@@ -5599,7 +5655,8 @@ function parseJsonIntoNotes(){
 
   if(filled.length){
     msg.style.color='#0F6E56';
-    msg.textContent=`✓ 已填入：${filled.join('、')}。JSON 內容會保留到景點儲存完成。`;
+    msg.textContent=`✓ 已填入：${filled.join('、')}。按「查看表單」確認後再儲存。`;
+    updateSpotEditorSectionHints();
   } else {
     msg.style.color='#A32D2D';
     msg.textContent='找不到可對應的欄位，請確認 JSON 的 key 名稱。';
@@ -6272,13 +6329,12 @@ document.getElementById('notes-cancel-btn').onclick=()=>{
   else{loadNoteInputs(pendingInfoSpot);renderInfoView();}
 };
 if(document.getElementById('json-paste-btn'))document.getElementById('json-paste-btn').onclick=()=>{
-  const area=document.getElementById('json-paste-area');
-  area.style.display=area.style.display==='none'?'block':'none';
-  if(area.style.display==='block')document.getElementById('json-input').focus();
+  setSpotEditorJsonMode(true);
 };
 if(document.getElementById('json-parse-btn'))document.getElementById('json-parse-btn').onclick=parseJsonIntoNotes;
 if(document.getElementById('json-cancel-btn'))document.getElementById('json-cancel-btn').onclick=()=>{
-  document.getElementById('json-paste-area').style.display='none';
+  setSpotEditorJsonMode(false);
+  updateSpotEditorSectionHints();
 };
 // support Cmd/Ctrl+Enter to parse
 if(document.getElementById('json-input'))document.getElementById('json-input').addEventListener('keydown',e=>{
