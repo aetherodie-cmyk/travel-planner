@@ -888,7 +888,8 @@ body.view-only .empty-day small{display:none}
 .seg-tool-btn.danger:hover{background:#fff5f5;border-color:#fcc;color:var(--danger)}
 .seg-google-route{background:#E8F5E9;border-color:#A5D6A7;color:#2E7D32;text-decoration:none}
 .seg-google-route:hover{background:#C8E6C9;border-color:#66BB6A;color:#1B5E20}
-.seg-source{display:inline-flex;align-items:center;margin-left:3px;padding:1px 5px;border-radius:999px;background:#E8F5E9;color:#2E7D32!important;font-size:9px;font-weight:800;text-decoration:none;white-space:nowrap}
+.seg-source{display:inline-flex;align-items:center;margin-left:3px;padding:1px 5px;border-radius:999px;background:#F1F3F4;color:#5F6368!important;font-size:12px;font-weight:400;text-decoration:none;white-space:nowrap}
+.seg-saved-label{margin-left:3px;color:var(--muted);font-size:10px;font-weight:700}
 .seg-manual-editor{grid-area:editor;display:none;gap:7px;padding:8px;border:1px solid var(--line-soft);border-radius:10px;background:#fff;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto auto;grid-column:1 / -1}
 .seg-manual-editor.open{display:grid}
 .seg-google-route{justify-content:center}
@@ -1778,7 +1779,7 @@ const params=new URLSearchParams(location.search);
 const CLOUD_CONFIG_KEY='tp_cloud_config';
 const GAS_SYNC_KEY='tp_gas_sync_config';
 const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/supabase/';
-const APP_VERSION='20260720-google-route-time';
+const APP_VERSION='20260720-saved-route-estimates';
 const SUPABASE_BOUND_APP=true;
 const SUPABASE_CONFIG={
   url:'https://pxoovfsvvmfxwibjtsvv.supabase.co',
@@ -1895,6 +1896,22 @@ function ensureTripStructureIds(){
     });
   });
 }
+function persistableSegmentResult(result){
+  if(!result||result.loading||result.error)return result||null;
+  if(result.source!=='Google Maps')return result;
+  const durationSec=Number(result.durationSec);
+  if(!Number.isFinite(durationSec)||durationSec<=0)return null;
+  const minutes=Math.max(1,Math.round(durationSec/60));
+  return{
+    duration:fmtDur(minutes*60),
+    durationSec:minutes*60,
+    distance:'',
+    distanceM:null,
+    coords:Array.isArray(result.coords)?result.coords:null,
+    source:'saved-google-estimate',
+    calculatedAt:result.fetchedAt||result.calculatedAt||new Date().toISOString()
+  };
+}
 function makeTripState(){
   ensureTripStructureIds();
   const persistedDays=days.map(day=>({
@@ -1903,8 +1920,8 @@ function makeTripState(){
       ...spot,
       seg:spot.seg?{
         ...spot.seg,
-        // Google route content is refreshed on demand rather than stored long-term.
-        result:spot.seg.result?.source==='Google Maps'?null:spot.seg.result
+        // Keep the rounded planning estimate, not the raw Google route response.
+        result:persistableSegmentResult(spot.seg.result)
       }:spot.seg
     }))
   }));
@@ -3985,7 +4002,7 @@ function renderDayDateBar(elementId){
 
 function invalidateGoogleResults(day){
   (day?.spots||[]).forEach(spot=>{
-    if(spot.seg?.result?.source==='Google Maps')spot.seg.result=null;
+    if(['Google Maps','saved-google-estimate'].includes(spot.seg?.result?.source))spot.seg.result=null;
   });
 }
 
@@ -4926,16 +4943,17 @@ function segmentResultHtml(seg,mode){
   const manualDistance=segmentDistanceText(seg);
   if(manual){
     const auto=seg.result&&!seg.result.loading&&!seg.result.error&&seg.result.durationSec
-      ?`<span class="seg-warning-text">自動參考：${seg.result.duration} · ${seg.result.distance}${seg.result.warning?'（估算）':''}</span>`:'';
+      ?`<span class="seg-warning-text">自動參考：${seg.result.duration}${seg.result.distance?` · ${seg.result.distance}`:''}${seg.result.warning?'（估算）':''}</span>`:'';
     return `<span class="seg-result manual">${modeName}${segmentDurationText(seg)}${manualDistance?` · ${manualDistance}`:''} <span class="seg-warning manual">手動</span>${auto}</span>`;
   }
   if(!seg.result)return `<span class="seg-result muted">${modeName}未計算</span>`;
   if(seg.result.loading)return `<span class="seg-result muted">${modeName}<i class="ti ti-loader-2"></i> 計算中</span>`;
   if(seg.result.error)return `<span class="seg-result muted" style="color:#e07" title="${esc(seg.result.message||'路線計算失敗')}">${modeName}${seg.result.message||'錯誤'}</span>`;
-  const source=seg.result.source==='Google Maps'
-    ?` <a href="https://www.google.com/maps" target="_blank" rel="noopener" class="seg-source" title="交通時間由 Google Maps 計算">Google Maps</a>`
+  const isSavedGoogle=seg.result.source==='saved-google-estimate';
+  const source=seg.result.source==='Google Maps'||isSavedGoogle
+    ?` <a href="https://www.google.com/maps" target="_blank" rel="noopener" class="seg-source" translate="no" title="交通時間由 Google Maps 計算">Google Maps</a>${isSavedGoogle?`<span class="seg-saved-label" title="計算於 ${esc(seg.result.calculatedAt||'')}，重新計算會覆蓋">已保存</span>`:''}`
     :(seg.result.source==='ORS'?'<span class="seg-source">ORS</span>':'');
-  return `<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${esc(seg.result.warning||'')}">${modeName}${seg.result.duration} · ${seg.result.distance} ${source} ${formatRouteWarning(seg.result.warning)}${seg.result.warning?`<span class="seg-warning-text">已改用估算：${seg.result.warning}</span>`:''}</span>`;
+  return `<span class="seg-result ${seg.result.warning?'warn':mode.cls}" title="${esc(seg.result.warning||'')}">${modeName}${seg.result.duration}${seg.result.distance?` · ${seg.result.distance}`:''} ${source} ${formatRouteWarning(seg.result.warning)}${seg.result.warning?`<span class="seg-warning-text">已改用估算：${seg.result.warning}</span>`:''}</span>`;
 }
 function googleRoutePlaceParam(spot){
   const text=[spot?.name,spot?.addr].filter(Boolean).join(' ').trim();
@@ -5633,7 +5651,7 @@ function exportJSON(){
           mode:s.seg.mode,
           manualDurationMin:s.seg.manualDurationMin??'',
           manualDistanceKm:s.seg.manualDistanceKm??'',
-          result:s.seg.result&&!s.seg.result.loading&&s.seg.result.source!=='Google Maps'?s.seg.result:null
+          result:persistableSegmentResult(s.seg.result)
         }:null
       }))
     }))
