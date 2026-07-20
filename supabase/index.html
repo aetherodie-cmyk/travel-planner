@@ -1605,7 +1605,7 @@ body.desktop-ui #mobile-appbar,body.desktop-ui #mobile-sheet,body.desktop-ui #mo
           <textarea id="json-input" placeholder='例：{ "name": "十和田湖", "address": "青森縣十和田市", "lat": 40.468, "lng": 140.878, "opening_hours": "全天開放", "admission_fee": "免費", "phone": "0176-75-2425", "website": "https://example.com", "remarks": "注意天候" }'></textarea>
           <div class="spot-json-actions">
             <button class="notes-save-btn" id="json-parse-btn" type="button" style="margin-top:0"><i class="ti ti-check"></i> 解析到欄位</button>
-            <button class="info-cancel-btn" id="json-cancel-btn" type="button"><i class="ti ti-x"></i> 取消</button>
+            <button class="info-cancel-btn" id="json-cancel-btn" type="button"><i class="ti ti-chevron-up"></i> 收起</button>
           </div>
           <div class="spot-json-msg" id="json-parse-msg"></div>
         </div>
@@ -1779,7 +1779,7 @@ const params=new URLSearchParams(location.search);
 const CLOUD_CONFIG_KEY='tp_cloud_config';
 const GAS_SYNC_KEY='tp_gas_sync_config';
 const PUBLIC_APP_URL='https://aetherodie-cmyk.github.io/travel-planner/supabase/';
-const APP_VERSION='20260720-saved-route-estimates';
+const APP_VERSION='20260720-stable-json-editor';
 const SUPABASE_BOUND_APP=true;
 const SUPABASE_CONFIG={
   url:'https://pxoovfsvvmfxwibjtsvv.supabase.co',
@@ -5265,6 +5265,18 @@ function setInfoMode(mode){
   document.getElementById('info-edit').classList.toggle('active',mode==='edit');
 }
 let spotEditorMode='edit';
+let spotEditorBaseline='';
+function spotEditorState(){
+  const ids=['note-day','note-category','note-name','note-addr','note-lat','note-lng','note-hours','note-fee','note-phone','note-website','note-memo','json-input'];
+  return JSON.stringify(Object.fromEntries(ids.map(id=>[id,document.getElementById(id)?.value||''])));
+}
+function rememberSpotEditorState(){spotEditorBaseline=spotEditorState();}
+function closeInfoModal({confirmDirty=true}={}){
+  const editing=document.getElementById('info-edit')?.classList.contains('active');
+  if(confirmDirty&&editing&&spotEditorState()!==spotEditorBaseline&&!confirm('這個景點還有尚未儲存的內容。確定要關閉嗎？'))return false;
+  document.getElementById('info-modal').classList.remove('open');
+  return true;
+}
 function findSpotPosition(spot){
   for(let di=0;di<days.length;di++){
     const si=days[di].spots.indexOf(spot);
@@ -5319,6 +5331,7 @@ function openSpotEditModal(spot){
   document.getElementById('info-modal-title').textContent=`編輯：${spot.name}`;
   document.getElementById('notes-saved-msg').textContent='';
   loadNoteInputs(spot);
+  rememberSpotEditorState();
   setEditorSaveLabel();
   document.getElementById('info-modal').classList.add('open');
   setInfoMode('edit');
@@ -5331,6 +5344,7 @@ function openSpotCreateModal(initialData={}){
   document.getElementById('notes-saved-msg').textContent='';
   clearNoteInputs(initialData.dayIdx??activeDay);
   applySpotDataToForm(initialData,'note');
+  rememberSpotEditorState();
   setEditorSaveLabel();
   document.getElementById('info-modal').classList.add('open');
   setInfoMode('edit');
@@ -5349,6 +5363,7 @@ function openInfoModal(spotId){
   pendingInfoSpot=spot;
   document.getElementById('info-modal-title').textContent=spot.name;
   loadNoteInputs(spot);
+  rememberSpotEditorState();
   spotEditorMode='edit';
   setEditorSaveLabel();
   document.getElementById('notes-saved-msg').textContent='';
@@ -5576,13 +5591,7 @@ function parseJsonIntoNotes(){
 
   if(filled.length){
     msg.style.color='#0F6E56';
-    msg.textContent=`✓ 已填入：${filled.join('、')}`;
-    // collapse JSON area
-    setTimeout(()=>{
-      document.getElementById('json-paste-area').style.display='none';
-      document.getElementById('json-input').value='';
-      msg.textContent='';
-    },2000);
+    msg.textContent=`✓ 已填入：${filled.join('、')}。JSON 內容會保留到景點儲存完成。`;
   } else {
     msg.style.color='#A32D2D';
     msg.textContent='找不到可對應的欄位，請確認 JSON 的 key 名稱。';
@@ -6246,11 +6255,12 @@ document.getElementById('conflict-force-save').onclick=async()=>{
   await saveGasTrip({force:true});
 };
 // info modal
-document.getElementById('info-modal-x').onclick=()=>document.getElementById('info-modal').classList.remove('open');
-document.getElementById('info-modal').onclick=e=>{if(e.target===document.getElementById('info-modal'))document.getElementById('info-modal').classList.remove('open');};
+document.getElementById('info-modal-x').onclick=()=>closeInfoModal();
+// Clicking the backdrop must not discard an in-progress JSON or spot form.
+document.getElementById('info-modal').onclick=e=>{if(e.target===document.getElementById('info-modal'))showToast('請使用右上角 × 或「取消」關閉，避免遺失尚未儲存的內容。');};
 document.getElementById('notes-save-btn').onclick=saveNotes;
 document.getElementById('notes-cancel-btn').onclick=()=>{
-  if(spotEditorMode==='create'||!pendingInfoSpot)document.getElementById('info-modal').classList.remove('open');
+  if(spotEditorMode==='create'||!pendingInfoSpot)closeInfoModal();
   else{loadNoteInputs(pendingInfoSpot);renderInfoView();}
 };
 if(document.getElementById('json-paste-btn'))document.getElementById('json-paste-btn').onclick=()=>{
@@ -6261,8 +6271,6 @@ if(document.getElementById('json-paste-btn'))document.getElementById('json-paste
 if(document.getElementById('json-parse-btn'))document.getElementById('json-parse-btn').onclick=parseJsonIntoNotes;
 if(document.getElementById('json-cancel-btn'))document.getElementById('json-cancel-btn').onclick=()=>{
   document.getElementById('json-paste-area').style.display='none';
-  document.getElementById('json-input').value='';
-  document.getElementById('json-parse-msg').textContent='';
 };
 // support Cmd/Ctrl+Enter to parse
 if(document.getElementById('json-input'))document.getElementById('json-input').addEventListener('keydown',e=>{
